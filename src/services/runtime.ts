@@ -387,12 +387,6 @@ export function installRuntimeFetchPatch(): void {
   (window as unknown as Record<string, unknown>).__wmFetchPatched = true;
 }
 
-const WEB_REDIRECT_PATHS = [
-  /^\/api\/[^/]+\/v1\//,
-  /^\/api\/rss-proxy(?:\?|$)/,
-  /^\/api\/polymarket(?:\?|$)/,
-  /^\/api\/ais-snapshot(?:\?|$)/,
-];
 const ALLOWED_REDIRECT_HOSTS = /^https:\/\/([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*worldmonitor\.app(:\d+)?$/;
 
 function isAllowedRedirectTarget(url: string): boolean {
@@ -415,8 +409,8 @@ export function installWebApiRedirect(): void {
 
   const nativeFetch = window.fetch.bind(window);
   const API_BASE = WS_API_URL;
-  const shouldRedirectPath = (pathWithQuery: string): boolean => WEB_REDIRECT_PATHS.some((pattern) => pattern.test(pathWithQuery));
-  const shouldFallbackToOrigin = (status: number): boolean => status === 404 || status === 405 || status === 501;
+  const shouldRedirectPath = (pathWithQuery: string): boolean => pathWithQuery.startsWith('/api/');
+  const shouldFallbackToOrigin = (status: number): boolean => status === 404 || status === 405 || status === 501 || status === 502 || status === 503;
   const fetchWithRedirectFallback = async (
     redirectedInput: RequestInfo | URL,
     originalInput: RequestInfo | URL,
