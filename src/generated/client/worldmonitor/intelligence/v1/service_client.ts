@@ -138,17 +138,6 @@ export interface GdeltArticle {
   tone: number;
 }
 
-export interface DeductSituationRequest {
-  query: string;
-  geoContext: string;
-}
-
-export interface DeductSituationResponse {
-  analysis: string;
-  model: string;
-  provider: string;
-}
-
 export type SeverityLevel = "SEVERITY_LEVEL_UNSPECIFIED" | "SEVERITY_LEVEL_LOW" | "SEVERITY_LEVEL_MEDIUM" | "SEVERITY_LEVEL_HIGH";
 
 export type TrendDirection = "TREND_DIRECTION_UNSPECIFIED" | "TREND_DIRECTION_RISING" | "TREND_DIRECTION_STABLE" | "TREND_DIRECTION_FALLING";
@@ -255,7 +244,12 @@ export class IntelligenceServiceClient {
 
   async classifyEvent(req: ClassifyEventRequest, options?: IntelligenceServiceCallOptions): Promise<ClassifyEventResponse> {
     let path = "/api/intelligence/v1/classify-event";
-    const url = this.baseURL + path;
+    const params = new URLSearchParams();
+    if (req.title != null && req.title !== "") params.set("title", String(req.title));
+    if (req.description != null && req.description !== "") params.set("description", String(req.description));
+    if (req.source != null && req.source !== "") params.set("source", String(req.source));
+    if (req.country != null && req.country !== "") params.set("country", String(req.country));
+    const url = this.baseURL + path + (params.toString() ? "?" + params.toString() : "");
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -264,9 +258,8 @@ export class IntelligenceServiceClient {
     };
 
     const resp = await this.fetchFn(url, {
-      method: "POST",
+      method: "GET",
       headers,
-      body: JSON.stringify(req),
       signal: options?.signal,
     });
 
@@ -278,9 +271,9 @@ export class IntelligenceServiceClient {
   }
 
   async getCountryIntelBrief(req: GetCountryIntelBriefRequest, options?: IntelligenceServiceCallOptions): Promise<GetCountryIntelBriefResponse> {
-    const path = "/api/intelligence/v1/get-country-intel-brief";
+    let path = "/api/intelligence/v1/get-country-intel-brief";
     const params = new URLSearchParams();
-    if (req.countryCode != null && req.countryCode !== "") params.set("country_code", req.countryCode);
+    if (req.countryCode != null && req.countryCode !== "") params.set("country_code", String(req.countryCode));
     const url = this.baseURL + path + (params.toString() ? "?" + params.toString() : "");
 
     const headers: Record<string, string> = {
@@ -329,30 +322,6 @@ export class IntelligenceServiceClient {
     }
 
     return await resp.json() as SearchGdeltDocumentsResponse;
-  }
-
-  async deductSituation(req: DeductSituationRequest, options?: IntelligenceServiceCallOptions): Promise<DeductSituationResponse> {
-    let path = "/api/intelligence/v1/deduct-situation";
-    const url = this.baseURL + path;
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...this.defaultHeaders,
-      ...options?.headers,
-    };
-
-    const resp = await this.fetchFn(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(req),
-      signal: options?.signal,
-    });
-
-    if (!resp.ok) {
-      return this.handleError(resp);
-    }
-
-    return await resp.json() as DeductSituationResponse;
   }
 
   private async handleError(resp: Response): Promise<never> {
