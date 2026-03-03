@@ -18,10 +18,11 @@ import Globe from 'globe.gl';
 import type { GlobeInstance, ConfigOptions } from 'globe.gl';
 import { INTEL_HOTSPOTS, CONFLICT_ZONES } from '@/config/geo';
 import { getCountryBbox } from '@/services/country-geometry';
-import type { MapLayers, Hotspot, MilitaryFlight, MilitaryVessel, NaturalEvent } from '@/types';
+import type { MapLayers, Hotspot, MilitaryFlight, MilitaryVessel, NaturalEvent, InternetOutage, CyberThreat, SocialUnrestEvent } from '@/types';
 import type { MapContainerState, MapView, TimeRange } from './MapContainer';
 import type { CountryClickPayload } from './DeckGLMap';
 import type { WeatherAlert } from '@/services/weather';
+import type { IranEvent } from '@/services/conflict';
 
 // ─── Marker discriminated union ─────────────────────────────────────────────
 interface BaseMarker {
@@ -67,7 +68,45 @@ interface NaturalMarker extends BaseMarker {
   category: string;
   title: string;
 }
-type GlobeMarker = ConflictMarker | HotspotMarker | FlightMarker | VesselMarker | WeatherMarker | NaturalMarker;
+interface IranMarker extends BaseMarker {
+  _kind: 'iran';
+  id: string;
+  title: string;
+  category: string;
+  severity: string;
+  location: string;
+}
+interface OutageMarker extends BaseMarker {
+  _kind: 'outage';
+  id: string;
+  title: string;
+  severity: string;
+  country: string;
+}
+interface CyberMarker extends BaseMarker {
+  _kind: 'cyber';
+  id: string;
+  indicator: string;
+  severity: string;
+  type: string;
+}
+interface FireMarker extends BaseMarker {
+  _kind: 'fire';
+  id: string;
+  region: string;
+  brightness: number;
+}
+interface ProtestMarker extends BaseMarker {
+  _kind: 'protest';
+  id: string;
+  title: string;
+  eventType: string;
+  country: string;
+}
+type GlobeMarker =
+  | ConflictMarker | HotspotMarker | FlightMarker | VesselMarker
+  | WeatherMarker | NaturalMarker | IranMarker | OutageMarker
+  | CyberMarker | FireMarker | ProtestMarker;
 
 export class GlobeMap {
   private container: HTMLElement;
@@ -82,6 +121,11 @@ export class GlobeMap {
   private vessels: VesselMarker[] = [];
   private weatherMarkers: WeatherMarker[] = [];
   private naturalMarkers: NaturalMarker[] = [];
+  private iranMarkers: IranMarker[] = [];
+  private outageMarkers: OutageMarker[] = [];
+  private cyberMarkers: CyberMarker[] = [];
+  private fireMarkers: FireMarker[] = [];
+  private protestMarkers: ProtestMarker[] = [];
 
   // Current layers state
   private layers: MapLayers;
@@ -318,6 +362,34 @@ export class GlobeMap {
       const icon = typeIcons[d.category] ?? '⚠';
       el.innerHTML = `<div style="font-size:11px;">${icon}</div>`;
       el.title = d.title;
+    } else if (d._kind === 'iran') {
+      const sc = d.severity === 'high' ? '#ff3030' : d.severity === 'medium' ? '#ff8800' : '#ffcc00';
+      el.innerHTML = `
+        <div style="position:relative;width:9px;height:9px;">
+          <div style="position:absolute;inset:0;border-radius:50%;background:${sc};border:1.5px solid rgba(255,255,255,0.5);box-shadow:0 0 5px 2px ${sc}88;"></div>
+          <div style="position:absolute;inset:-4px;border-radius:50%;background:${sc}33;animation:globe-pulse 2s ease-out infinite;"></div>
+        </div>`;
+      el.title = d.title;
+    } else if (d._kind === 'outage') {
+      const sc = d.severity === 'total' ? '#ff2020' : d.severity === 'major' ? '#ff8800' : '#ffcc00';
+      el.innerHTML = `<div style="font-size:12px;color:${sc};text-shadow:0 0 4px ${sc}88;">📡</div>`;
+      el.title = `${d.country}: ${d.title}`;
+    } else if (d._kind === 'cyber') {
+      const sc = d.severity === 'critical' ? '#ff0044' : d.severity === 'high' ? '#ff4400' : d.severity === 'medium' ? '#ffaa00' : '#44aaff';
+      el.innerHTML = `<div style="font-size:10px;color:${sc};text-shadow:0 0 4px ${sc}88;font-weight:bold;">🛡</div>`;
+      el.title = `${d.type}: ${d.indicator}`;
+    } else if (d._kind === 'fire') {
+      const intensity = d.brightness > 400 ? '#ff2020' : d.brightness > 330 ? '#ff6600' : '#ffaa00';
+      el.innerHTML = `<div style="font-size:10px;color:${intensity};text-shadow:0 0 4px ${intensity}88;">🔥</div>`;
+      el.title = `Fire — ${d.region}`;
+    } else if (d._kind === 'protest') {
+      const typeColors: Record<string, string> = {
+        riot: '#ff3030', protest: '#ffaa00', strike: '#44aaff',
+        demonstration: '#88ff44', civil_unrest: '#ff6600',
+      };
+      const c = typeColors[d.eventType] ?? '#ffaa00';
+      el.innerHTML = `<div style="font-size:11px;color:${c};text-shadow:0 0 4px ${c}88;">📢</div>`;
+      el.title = d.title;
     }
 
     el.addEventListener('click', (e) => {
@@ -379,6 +451,30 @@ export class GlobeMap {
     } else if (d._kind === 'natural') {
       html = `<span style="font-weight:bold;">${d.title.slice(0, 60)}</span>` +
              `<br><span style="opacity:.7;">${d.category}</span>`;
+    } else if (d._kind === 'iran') {
+      const sc = d.severity === 'high' ? '#ff3030' : d.severity === 'medium' ? '#ff8800' : '#ffcc00';
+      html = `<span style="color:${sc};font-weight:bold;">🎯 ${d.title.slice(0, 60)}</span>` +
+             `<br><span style="opacity:.7;">${d.category}${d.location ? ' · ' + d.location : ''}</span>`;
+    } else if (d._kind === 'outage') {
+      const sc = d.severity === 'total' ? '#ff2020' : d.severity === 'major' ? '#ff8800' : '#ffcc00';
+      html = `<span style="color:${sc};font-weight:bold;">📡 ${d.severity.toUpperCase()} Outage</span>` +
+             `<br><span style="opacity:.7;">${d.country}</span>` +
+             `<br><span style="opacity:.7;white-space:normal;display:block;">${d.title.slice(0, 70)}</span>`;
+    } else if (d._kind === 'cyber') {
+      const sc = d.severity === 'critical' ? '#ff0044' : d.severity === 'high' ? '#ff4400' : '#ffaa00';
+      html = `<span style="color:${sc};font-weight:bold;">🛡 ${d.severity.toUpperCase()}</span>` +
+             `<br><span style="opacity:.7;">${d.type}</span>` +
+             `<br><span style="opacity:.5;font-size:10px;">${d.indicator.slice(0, 40)}</span>`;
+    } else if (d._kind === 'fire') {
+      html = `<span style="color:#ff6600;font-weight:bold;">🔥 Wildfire</span>` +
+             `<br><span style="opacity:.7;">${d.region}</span>` +
+             `<br><span style="opacity:.5;">Brightness: ${d.brightness.toFixed(0)} K</span>`;
+    } else if (d._kind === 'protest') {
+      const typeColors: Record<string, string> = { riot: '#ff3030', strike: '#44aaff', protest: '#ffaa00' };
+      const c = typeColors[d.eventType] ?? '#ffaa00';
+      html = `<span style="color:${c};font-weight:bold;">📢 ${d.eventType}</span>` +
+             `<br><span style="opacity:.7;">${d.country}</span>` +
+             `<br><span style="opacity:.7;white-space:normal;display:block;">${d.title.slice(0, 70)}</span>`;
     }
     el.innerHTML = html;
 
@@ -439,16 +535,45 @@ export class GlobeMap {
   }
 
   private createLayerToggles(): void {
-    const layers: Array<{ key: keyof MapLayers; label: string; icon: string }> = [
-      { key: 'hotspots',  label: 'Intel Hotspots',   icon: '&#127919;' },
-      { key: 'conflicts', label: 'Conflict Zones',    icon: '&#9876;'   },
-      { key: 'military',  label: 'Military Activity', icon: '&#9992;'   },
-      { key: 'weather',   label: 'Weather Alerts',    icon: '&#9928;'   },
-      { key: 'natural',   label: 'Natural Events',    icon: '&#127755;' },
+    const layers: Array<{ key: string; label: string; icon: string }> = [
+      // Conflict & Security
+      { key: 'iranAttacks',  label: 'Iran Threat Activity',  icon: '&#127919;' },
+      { key: 'hotspots',     label: 'Intel Hotspots',        icon: '&#127919;' },
+      { key: 'conflicts',    label: 'Conflict Zones',         icon: '&#9876;'   },
+      { key: 'bases',        label: 'Military Bases',         icon: '&#127963;' },
+      { key: 'nuclear',      label: 'Nuclear Sites',          icon: '&#9762;'   },
+      { key: 'irradiators',  label: 'Gamma Irradiators',      icon: '&#9888;'   },
+      { key: 'spaceports',   label: 'Spaceports',             icon: '&#128640;' },
+      { key: 'military',     label: 'Military Activity',      icon: '&#9992;'   },
+      { key: 'ais',          label: 'Ship Traffic',           icon: '&#128674;' },
+      { key: 'flights',      label: 'Flight Delays',          icon: '&#9992;'   },
+      { key: 'protests',     label: 'Protests & Unrest',      icon: '&#128226;' },
+      { key: 'ucdpEvents',   label: 'UCDP Events',            icon: '&#9876;'   },
+      { key: 'displacement', label: 'Displacement Flows',     icon: '&#128101;' },
+      // Infrastructure
+      { key: 'cables',       label: 'Undersea Cables',        icon: '&#128268;' },
+      { key: 'pipelines',    label: 'Pipelines',              icon: '&#128738;' },
+      { key: 'datacenters',  label: 'Data Centers',           icon: '&#128421;' },
+      { key: 'tradeRoutes',  label: 'Trade Routes',           icon: '&#9875;'   },
+      { key: 'waterways',    label: 'Strategic Waterways',    icon: '&#9875;'   },
+      { key: 'economic',     label: 'Economic Centers',       icon: '&#128176;' },
+      { key: 'minerals',     label: 'Critical Minerals',      icon: '&#128142;' },
+      // Hazards & Environment
+      { key: 'weather',      label: 'Weather Alerts',         icon: '&#9928;'   },
+      { key: 'natural',      label: 'Natural Events',         icon: '&#127755;' },
+      { key: 'fires',        label: 'Wildfires',              icon: '&#128293;' },
+      { key: 'climate',      label: 'Climate Anomalies',      icon: '&#127787;' },
+      { key: 'outages',      label: 'Internet Outages',       icon: '&#128225;' },
+      { key: 'cyberThreats', label: 'Cyber Threats',          icon: '&#128737;' },
+      { key: 'gpsJamming',   label: 'GPS Jamming',            icon: '&#128225;' },
+      { key: 'dayNight',     label: 'Day / Night',            icon: '&#127763;' },
     ];
 
     const el = document.createElement('div');
     el.className = 'layer-toggles deckgl-layer-toggles';
+    // Override deckgl-layer-toggles CSS which places at bottom; globe needs top-left
+    el.style.bottom = 'auto';
+    el.style.top = '10px';
     el.innerHTML = `
       <div class="toggle-header">
         <span>LAYERS</span>
@@ -457,7 +582,7 @@ export class GlobeMap {
       <div class="toggle-list" style="max-height:32vh;overflow-y:auto;scrollbar-width:thin;">
         ${layers.map(({ key, label, icon }) => `
           <label class="layer-toggle" data-layer="${key}">
-            <input type="checkbox" ${this.layers[key] ? 'checked' : ''}>
+            <input type="checkbox" ${(this.layers as any)[key] ? 'checked' : ''}>
             <span class="toggle-icon">${icon}</span>
             <span class="toggle-label">${label}</span>
           </label>`).join('')}
@@ -466,12 +591,12 @@ export class GlobeMap {
 
     el.querySelectorAll('.layer-toggle input').forEach(input => {
       input.addEventListener('change', () => {
-        const layer = (input as HTMLInputElement).closest('.layer-toggle')?.getAttribute('data-layer') as keyof MapLayers;
+        const layer = (input as HTMLInputElement).closest('.layer-toggle')?.getAttribute('data-layer');
         if (layer) {
           const checked = (input as HTMLInputElement).checked;
           (this.layers as any)[layer] = checked;
           this.flushMarkers();
-          this.onLayerChangeCb?.(layer, checked, 'user');
+          this.onLayerChangeCb?.(layer as keyof MapLayers, checked, 'user');
         }
       });
     });
@@ -509,6 +634,11 @@ export class GlobeMap {
     }
     if (this.layers.weather) markers.push(...this.weatherMarkers);
     if (this.layers.natural) markers.push(...this.naturalMarkers);
+    if ((this.layers as any).iranAttacks) markers.push(...this.iranMarkers);
+    if (this.layers.outages) markers.push(...this.outageMarkers);
+    if (this.layers.cyberThreats) markers.push(...this.cyberMarkers);
+    if ((this.layers as any).fires) markers.push(...this.fireMarkers);
+    if (this.layers.protests) markers.push(...this.protestMarkers);
 
     this.globe.htmlElementsData(markers);
   }
@@ -738,11 +868,33 @@ export class GlobeMap {
   public highlightCountry(_code: string): void {}
   public clearCountryHighlight(): void {}
   public setEarthquakes(_e: any[]): void {}
-  public setOutages(_o: any[]): void {}
+  public setOutages(outages: InternetOutage[]): void {
+    this.outageMarkers = (outages ?? []).filter(o => o.lat != null && o.lon != null).map(o => ({
+      _kind: 'outage' as const,
+      _lat: o.lat,
+      _lng: o.lon,
+      id: o.id,
+      title: o.title ?? '',
+      severity: o.severity ?? 'partial',
+      country: o.country ?? '',
+    }));
+    this.flushMarkers();
+  }
   public setAisData(_d: any[], _z: any[]): void {}
   public setCableActivity(_a: any[], _r: any[]): void {}
   public setCableHealth(_m: any): void {}
-  public setProtests(_events: any[]): void {}
+  public setProtests(events: SocialUnrestEvent[]): void {
+    this.protestMarkers = (events ?? []).filter(e => e.lat != null && e.lon != null).map(e => ({
+      _kind: 'protest' as const,
+      _lat: e.lat,
+      _lng: e.lon,
+      id: e.id,
+      title: e.title ?? '',
+      eventType: e.eventType ?? 'protest',
+      country: e.country ?? '',
+    }));
+    this.flushMarkers();
+  }
   public setFlightDelays(_delays: any[]): void {}
   public setNewsLocations(_data: any[]): void {}
   public setPositiveEvents(_events: any[]): void {}
@@ -753,11 +905,44 @@ export class GlobeMap {
   public setDisplacementFlows(_flows: any[]): void {}
   public setClimateAnomalies(_anomalies: any[]): void {}
   public setGpsJamming(_hexes: any[]): void {}
-  public setCyberThreats(_threats: any[]): void {}
-  public setIranEvents(_events: any[]): void {}
+  public setCyberThreats(threats: CyberThreat[]): void {
+    this.cyberMarkers = (threats ?? []).filter(t => t.lat != null && t.lon != null).map(t => ({
+      _kind: 'cyber' as const,
+      _lat: t.lat,
+      _lng: t.lon,
+      id: t.id,
+      indicator: t.indicator ?? '',
+      severity: t.severity ?? 'low',
+      type: t.type ?? 'malware_host',
+    }));
+    this.flushMarkers();
+  }
+  public setIranEvents(events: IranEvent[]): void {
+    this.iranMarkers = (events ?? []).filter(e => e.latitude != null && e.longitude != null).map(e => ({
+      _kind: 'iran' as const,
+      _lat: e.latitude,
+      _lng: e.longitude,
+      id: e.id,
+      title: e.title ?? '',
+      category: e.category ?? '',
+      severity: e.severity ?? 'medium',
+      location: e.locationName ?? '',
+    }));
+    this.flushMarkers();
+  }
   public setTechEvents(_events: any[]): void {}
   public setUcdpEvents(_events: any[]): void {}
-  public setFires(_fires: any[]): void {}
+  public setFires(fires: NaturalEvent[]): void {
+    this.fireMarkers = (fires ?? []).filter(f => f.lat != null && f.lon != null).map(f => ({
+      _kind: 'fire' as const,
+      _lat: f.lat,
+      _lng: f.lon,
+      id: f.id,
+      region: f.title ?? '',
+      brightness: (f as any).brightness ?? 330,
+    }));
+    this.flushMarkers();
+  }
   public onHotspotClicked(cb: (h: Hotspot) => void): void { this.onHotspotClickCb = cb; }
   public onTimeRangeChanged(_cb: (r: TimeRange) => void): void {}
   public onStateChanged(_cb: (s: MapContainerState) => void): void {}
