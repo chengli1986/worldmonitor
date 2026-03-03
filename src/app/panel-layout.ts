@@ -38,6 +38,8 @@ import {
   TelegramIntelPanel,
   GulfEconomiesPanel,
   WorldClockPanel,
+  AirlineIntelPanel,
+  AviationCommandBar,
 } from '@/components';
 import { SatelliteFiresPanel } from '@/components/SatelliteFiresPanel';
 import { PositiveNewsFeedPanel } from '@/components/PositiveNewsFeedPanel';
@@ -633,6 +635,15 @@ export class PanelLayoutManager implements AppModule {
     }
 
     this.ctx.panels['world-clock'] = new WorldClockPanel();
+
+    // Airline Intelligence panel (non-happy variants)
+    if (SITE_VARIANT !== 'happy') {
+      const airlineIntelPanel = new AirlineIntelPanel();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.ctx.panels as Record<string, any>)['airline-intel'] = airlineIntelPanel;
+      // Launch the Ctrl+J command bar (attaches global keydown listener)
+      new AviationCommandBar();
+    }
 
     if (SITE_VARIANT !== 'happy') {
       if (!this.ctx.panels['gulf-economies']) {

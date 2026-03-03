@@ -350,7 +350,7 @@ export interface NotamClosureResult {
   notamsByIcao: Map<string, string>;
 }
 
-function getRelayBaseUrl(): string | null {
+export function getRelayBaseUrl(): string | null {
   const relayUrl = process.env.WS_RELAY_URL;
   if (!relayUrl) return null;
   return relayUrl
@@ -359,7 +359,7 @@ function getRelayBaseUrl(): string | null {
     .replace(/\/$/, '');
 }
 
-function getRelayHeaders(): Record<string, string> {
+export function getRelayHeaders(extra: Record<string, string> = {}): Record<string, string> {
   const headers: Record<string, string> = { 'User-Agent': CHROME_UA };
   const relaySecret = process.env.RELAY_SHARED_SECRET;
   if (relaySecret) {

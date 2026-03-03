@@ -322,6 +322,16 @@ const ALLOWED_DOMAINS = [
   'www.nature.com',
   'www.livescience.com',
   'www.newscientist.com',
+  // Aviation news feeds
+  'www.flightglobal.com',
+  'simpleflying.com',
+  'aerotime.aero',
+  'thepointsguy.com',
+  'airlinegeeks.com',
+  'onemileatatime.com',
+  'viewfromthewing.com',
+  'www.aviationpros.com',
+  'www.aviationweek.com',
 ];
 
 export default async function handler(req) {
