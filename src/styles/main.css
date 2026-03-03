@@ -9423,11 +9423,12 @@ a.prediction-link:hover {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Make map section smaller on mobile to show panels */
+  /* Full-viewport map on mobile (Google Maps-like experience) */
   .map-section {
-    height: 40vh !important;
-    min-height: 250px !important;
-    max-height: 50vh !important;
+    height: calc(100vh - 48px) !important;
+    height: calc(100dvh - 48px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 60vh !important;
+    max-height: 100dvh !important;
   }
 
   /* Collapsed map on mobile — higher specificity overrides .map-section above */

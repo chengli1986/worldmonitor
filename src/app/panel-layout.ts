@@ -245,7 +245,7 @@ export class PanelLayoutManager implements AppModule {
     if (!mapSection || !headerLeft) return;
 
     const stored = localStorage.getItem('mobile-map-collapsed');
-    const collapsed = stored === null || stored === 'true';
+    const collapsed = stored === 'true';
     if (collapsed) mapSection.classList.add('collapsed');
 
     const updateBtn = (btn: HTMLButtonElement, isCollapsed: boolean) => {
