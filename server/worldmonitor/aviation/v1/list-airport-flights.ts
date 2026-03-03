@@ -144,7 +144,7 @@ export async function listAirportFlights(
     const airport = req.airport?.toUpperCase() || 'IST';
     const direction = req.direction || 'FLIGHT_DIRECTION_BOTH';
     const limit = Math.min(req.limit || 30, 100);
-    const cacheKey = `aviation:flights:${airport}:${direction}:v1`;
+    const cacheKey = `aviation:flights:${airport}:${direction}:${limit}:v1`;
     const now = Date.now();
 
     try {
