@@ -10,7 +10,6 @@ import { cachedFetchJson } from '../../../_shared/redis';
 import {
     fetchAviationStackDelays,
     fetchNotamClosures,
-    toProtoSeverity,
     determineSeverity,
 } from './_shared';
 
