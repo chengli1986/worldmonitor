@@ -58,7 +58,7 @@ const OPENSKY_PUBLIC_BASE = 'https://opensky-network.org/api';
 
 async function fetchOpenSkyAnonymous(req: TrackAircraftRequest): Promise<PositionSample[]> {
     let url: string;
-    if (req.swLat && req.neLat) {
+    if (req.swLat != null && req.neLat != null) {
         url = `${OPENSKY_PUBLIC_BASE}/states/all?lamin=${req.swLat}&lomin=${req.swLon}&lamax=${req.neLat}&lomax=${req.neLon}`;
     } else if (req.icao24) {
         url = `${OPENSKY_PUBLIC_BASE}/states/all?icao24=${req.icao24}`;
@@ -77,7 +77,7 @@ async function fetchOpenSkyAnonymous(req: TrackAircraftRequest): Promise<Positio
 
 function buildCacheKey(req: TrackAircraftRequest): string {
     if (req.icao24) return `aviation:track:icao:${req.icao24}:v1`;
-    if (req.swLat && req.neLat) {
+    if (req.swLat != null && req.neLat != null) {
         return `aviation:track:${Math.floor(req.swLat)}:${Math.floor(req.swLon)}:${Math.ceil(req.neLat)}:${Math.ceil(req.neLon)}:v1`;
     }
     return 'aviation:track:all:v1';
@@ -99,7 +99,7 @@ export async function trackAircraft(
                 if (relayBase) {
                     try {
                         let osUrl: string;
-                        if (req.swLat && req.neLat) {
+                        if (req.swLat != null && req.neLat != null) {
                             osUrl = `${relayBase}/opensky/states/all?lamin=${req.swLat}&lomin=${req.swLon}&lamax=${req.neLat}&lomax=${req.neLon}`;
                         } else if (req.icao24) {
                             osUrl = `${relayBase}/opensky/states/all?icao24=${req.icao24}`;
