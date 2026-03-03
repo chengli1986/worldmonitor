@@ -15,7 +15,7 @@ import {
     type FlightDelaySeverity,
 } from '@/services/aviation';
 import { aviationWatchlist } from '@/services/aviation/watchlist';
-import { escapeHtml } from '@/utils/sanitize';
+import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { Panel } from './Panel';
 
 // ---- Helpers ----
@@ -305,7 +305,7 @@ export class AirlineIntelPanel extends Panel {
         }
         const items = this.newsData.map(n => `
       <div class="news-item" style="padding:8px 0;border-bottom:1px solid var(--border-color,#333)">
-        <a href="${escapeHtml(n.url)}" target="_blank" rel="noopener" class="news-link">${escapeHtml(n.title)}</a>
+        <a href="${sanitizeUrl(n.url)}" target="_blank" rel="noopener" class="news-link">${escapeHtml(n.title)}</a>
         <div class="news-meta" style="font-size:11px;color:var(--text-secondary,#999);margin-top:2px">${escapeHtml(n.sourceName)} · ${n.publishedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
       </div>`).join('');
         this.content.innerHTML = `<div class="news-list" style="padding:0 4px">${items}</div>`;
