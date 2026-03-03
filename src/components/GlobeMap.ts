@@ -17,6 +17,7 @@
 import Globe from 'globe.gl';
 import type { GlobeInstance, ConfigOptions } from 'globe.gl';
 import { INTEL_HOTSPOTS, CONFLICT_ZONES } from '@/config/geo';
+import { getCountryBbox } from '@/services/country-geometry';
 import type { MapLayers, Hotspot, MilitaryFlight, MilitaryVessel, NaturalEvent } from '@/types';
 import type { MapContainerState, MapView, TimeRange } from './MapContainer';
 import type { CountryClickPayload } from './DeckGLMap';
@@ -93,6 +94,9 @@ export class GlobeMap {
   // Auto-rotate timer (like Sentinel: resume after 60 s idle)
   private autoRotateTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // ResizeObserver keeps the canvas in sync with the container
+  private resizeObserver: ResizeObserver | null = null;
+
   constructor(container: HTMLElement, initialState: MapContainerState) {
     this.container = container;
     this.layers = { ...initialState.layers };
@@ -122,13 +126,17 @@ export class GlobeMap {
       return;
     }
 
+    // Initial sizing: use container dimensions, fall back to window if not yet laid out
+    const initW = this.container.clientWidth || window.innerWidth;
+    const initH = this.container.clientHeight || window.innerHeight;
+
     globe
       .globeImageUrl('/textures/earth-topo-bathy.jpg')
       .backgroundImageUrl('/textures/night-sky.png')
       .atmosphereColor('#4466cc')
       .atmosphereAltitude(0.18)
-      .width(this.container.clientWidth || window.innerWidth)
-      .height(this.container.clientHeight || window.innerHeight)
+      .width(initW)
+      .height(initH)
       .pathTransitionDuration(0);
 
     // Orbit controls — match Sentinel's settings
@@ -141,6 +149,25 @@ export class GlobeMap {
     controls.minDistance = 101;
     controls.maxDistance = 600;
     controls.enableDamping = true;
+
+    // Force the canvas to visually fill the container so it expands with CSS transitions.
+    // globe.gl sets explicit width/height attributes; we override the CSS so the canvas
+    // always covers the full container even before the next renderer resize fires.
+    const glCanvas = this.container.querySelector('canvas');
+    if (glCanvas) {
+      (glCanvas as HTMLElement).style.cssText =
+        'position:absolute;top:0;left:0;width:100% !important;height:100% !important;';
+    }
+
+    // ResizeObserver: whenever the container grows or shrinks (fullscreen toggle,
+    // drag-resize, window resize), update the globe.gl renderer dimensions.
+    this.resizeObserver = new ResizeObserver(() => {
+      if (!this.globe || this.destroyed) return;
+      const w = this.container.clientWidth;
+      const h = this.container.clientHeight;
+      if (w > 0 && h > 0) this.globe.width(w).height(h);
+    });
+    this.resizeObserver.observe(this.container);
 
     // Load specular/water map for ocean shimmer
     setTimeout(async () => {
@@ -414,14 +441,14 @@ export class GlobeMap {
   // ─── Camera / navigation ──────────────────────────────────────────────────
 
   private static readonly VIEW_POVS: Record<MapView, { lat: number; lng: number; altitude: number }> = {
-    global:   { lat: 20,  lng:  0,   altitude: 2.5 },
-    america:  { lat: 20,  lng: -90,  altitude: 2.0 },
-    mena:     { lat: 25,  lng:  40,  altitude: 1.8 },
-    eu:       { lat: 50,  lng:  10,  altitude: 1.8 },
-    asia:     { lat: 35,  lng: 105,  altitude: 2.0 },
-    latam:    { lat: -15, lng: -60,  altitude: 2.0 },
-    africa:   { lat:  5,  lng:  20,  altitude: 2.0 },
-    oceania:  { lat: -25, lng: 140,  altitude: 2.0 },
+    global:   { lat: 20,  lng:  0,   altitude: 1.8 },
+    america:  { lat: 20,  lng: -90,  altitude: 1.5 },
+    mena:     { lat: 25,  lng:  40,  altitude: 1.2 },
+    eu:       { lat: 50,  lng:  10,  altitude: 1.2 },
+    asia:     { lat: 35,  lng: 105,  altitude: 1.5 },
+    latam:    { lat: -15, lng: -60,  altitude: 1.5 },
+    africa:   { lat:  5,  lng:  20,  altitude: 1.5 },
+    oceania:  { lat: -25, lng: 140,  altitude: 1.5 },
   };
 
   public setView(view: MapView): void {
@@ -431,9 +458,21 @@ export class GlobeMap {
     this.globe.pointOfView(pov, 1200);
   }
 
-  public setCenter(lat: number, lon: number, _zoom?: number): void {
+  public setCenter(lat: number, lon: number, zoom?: number): void {
     if (!this.globe) return;
-    this.globe.pointOfView({ lat, lng: lon, altitude: 1.2 }, 1000);
+    // Map deck.gl zoom levels → globe.gl altitude
+    // deck.gl: 2=world, 3=continent, 4=country, 5=region, 6+=city
+    // globe.gl altitude: 1.8=full globe, 0.6=country, 0.15=city
+    let altitude = 1.2;
+    if (zoom !== undefined) {
+      if      (zoom >= 7) altitude = 0.08;
+      else if (zoom >= 6) altitude = 0.15;
+      else if (zoom >= 5) altitude = 0.3;
+      else if (zoom >= 4) altitude = 0.5;
+      else if (zoom >= 3) altitude = 0.8;
+      else                altitude = 1.5;
+    }
+    this.globe.pointOfView({ lat, lng: lon, altitude }, 1200);
   }
 
   public getCenter(): { lat: number; lon: number } | null {
@@ -445,10 +484,10 @@ export class GlobeMap {
   // ─── Resize ────────────────────────────────────────────────────────────────
 
   public resize(): void {
-    if (!this.globe) return;
-    this.globe
-      .width(this.container.clientWidth || window.innerWidth)
-      .height(this.container.clientHeight || window.innerHeight);
+    if (!this.globe || this.destroyed) return;
+    const w = this.container.clientWidth;
+    const h = this.container.clientHeight;
+    if (w > 0 && h > 0) this.globe.width(w).height(h);
   }
 
   // ─── State API ────────────────────────────────────────────────────────────
@@ -482,8 +521,11 @@ export class GlobeMap {
   }
 
   // ─── No-op stubs (keep MapContainer happy) ────────────────────────────────
-  public render(): void {}
-  public setIsResizing(_v: boolean): void {}
+  public render(): void { this.resize(); }
+  public setIsResizing(isResizing: boolean): void {
+    // After drag-resize or fullscreen transition completes, re-sync dimensions
+    if (!isResizing) this.resize();
+  }
   public setZoom(_z: number): void {}
   public setRenderPaused(_paused: boolean): void {}
   public updateHotspotActivity(_news: any[]): void {}
@@ -508,7 +550,18 @@ export class GlobeMap {
   public triggerDatacenterClick(_id: string): void {}
   public triggerNuclearClick(_id: string): void {}
   public triggerIrradiatorClick(_id: string): void {}
-  public fitCountry(_code: string): void {}
+  public fitCountry(code: string): void {
+    if (!this.globe) return;
+    const bbox = getCountryBbox(code);
+    if (!bbox) return;
+    const [minLon, minLat, maxLon, maxLat] = bbox;
+    const lat = (minLat + maxLat) / 2;
+    const lng = (minLon + maxLon) / 2;
+    const span = Math.max(maxLat - minLat, maxLon - minLon);
+    // Map geographic span → altitude: large country (Russia ~170°) vs small (Luxembourg ~0.5°)
+    const altitude = span > 60 ? 1.0 : span > 20 ? 0.7 : span > 8 ? 0.45 : span > 3 ? 0.25 : 0.12;
+    this.globe.pointOfView({ lat, lng, altitude }, 1200);
+  }
   public highlightCountry(_code: string): void {}
   public clearCountryHighlight(): void {}
   public setEarthquakes(_e: any[]): void {}
@@ -543,6 +596,8 @@ export class GlobeMap {
   public destroy(): void {
     this.destroyed = true;
     if (this.autoRotateTimer) clearTimeout(this.autoRotateTimer);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     if (this.globe) {
       try { this.globe._destructor(); } catch { /* ignore */ }
       this.globe = null;

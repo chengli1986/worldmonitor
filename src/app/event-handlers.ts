@@ -251,6 +251,7 @@ export class EventHandlerManager implements AppModule {
     });
 
     this.boundResizeHandler = () => {
+      this.ctx.map?.setIsResizing(false);
       this.ctx.map?.render();
     };
     window.addEventListener('resize', this.boundResizeHandler);
@@ -878,6 +879,8 @@ export class EventHandlerManager implements AppModule {
       document.body.classList.toggle('live-news-fullscreen-active', isFullscreen);
       btn.innerHTML = isFullscreen ? shrinkSvg : expandSvg;
       btn.title = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
+      // Notify map so globe (and deck.gl) can resize after CSS transition completes
+      setTimeout(() => this.ctx.map?.setIsResizing(false), 320);
     };
 
     btn.addEventListener('click', toggle);
