@@ -38,8 +38,11 @@ function resolveCommandLabel(cmd: Command): string {
     }
     case 'country':
       return `${t('commands.prefixes.brief')}: ${cmd.label}`;
-    default:
-      return cmd.label;
+    default: {
+      const i18nKey = `commands.labels.${cmd.id.replace(':', '.')}`;
+      const resolved = t(i18nKey, { defaultValue: '' });
+      return resolved || cmd.label;
+    }
   }
 }
 
@@ -177,13 +180,19 @@ export class SearchModal {
         const panelId = cmd.id.slice(6);
         if (!this.activePanelIds.has(panelId)) continue;
       }
-      for (const keyword of cmd.keywords) {
-        if (keyword.includes(query) || (keyword.length >= 3 && query.includes(keyword))) {
-          const isExact = keyword === query;
-          const isPrefix = keyword.startsWith(query);
-          matched.push({ command: cmd, score: isExact ? 3 : isPrefix ? 2 : 1 });
-          break;
+      const label = resolveCommandLabel(cmd).toLowerCase();
+      const allTerms = [...cmd.keywords, label];
+      let bestScore = 0;
+      for (const term of allTerms) {
+        if (term.includes(query) || (term.length >= 3 && query.includes(term))) {
+          const isExact = term === query;
+          const isPrefix = term.startsWith(query);
+          const score = isExact ? 3 : isPrefix ? 2 : 1;
+          if (score > bestScore) bestScore = score;
         }
+      }
+      if (bestScore > 0) {
+        matched.push({ command: cmd, score: bestScore });
       }
     }
     return matched.sort((a, b) => b.score - a.score).slice(0, MAX_COMMANDS);
@@ -289,26 +298,27 @@ export class SearchModal {
   private renderEmpty(): void {
     if (!this.resultsList) return;
 
-    const tips: { icon: string; key: string; example: string }[] = [
-      { icon: '\u{1F30D}', key: 'commands.tips.map', example: 'iran' },
-      { icon: '\u{1F4CB}', key: 'commands.tips.panel', example: 'news' },
-      { icon: '\u{1F4C4}', key: 'commands.tips.brief', example: 'brief china' },
-      { icon: '\u{1F6E1}\uFE0F', key: 'commands.tips.layers', example: 'military layers' },
-      { icon: '\u23F1\uFE0F', key: 'commands.tips.time', example: '24h' },
-      { icon: '\u2699\uFE0F', key: 'commands.tips.settings', example: 'dark mode' },
+    const tips: { icon: string; key: string; exampleKey: string }[] = [
+      { icon: '\u{1F30D}', key: 'commands.tips.map', exampleKey: 'commands.tips.mapExample' },
+      { icon: '\u{1F4CB}', key: 'commands.tips.panel', exampleKey: 'commands.tips.panelExample' },
+      { icon: '\u{1F4C4}', key: 'commands.tips.brief', exampleKey: 'commands.tips.briefExample' },
+      { icon: '\u{1F6E1}\uFE0F', key: 'commands.tips.layers', exampleKey: 'commands.tips.layersExample' },
+      { icon: '\u23F1\uFE0F', key: 'commands.tips.time', exampleKey: 'commands.tips.timeExample' },
+      { icon: '\u2699\uFE0F', key: 'commands.tips.settings', exampleKey: 'commands.tips.settingsExample' },
     ];
 
     const shuffled = tips.sort(() => Math.random() - 0.5).slice(0, 4);
 
     let html = `<div class="search-section-header">${t('modals.search.empty')}</div>`;
     shuffled.forEach((tip, i) => {
+      const example = t(tip.exampleKey);
       html += `
-        <div class="search-result-item tip-item${i === 0 ? ' selected' : ''}" data-tip-example="${escapeHtml(tip.example)}">
+        <div class="search-result-item tip-item${i === 0 ? ' selected' : ''}" data-tip-example="${escapeHtml(example)}">
           <span class="search-result-icon">${tip.icon}</span>
           <div class="search-result-content">
             <div class="search-result-title">${escapeHtml(t(tip.key))}</div>
           </div>
-          <kbd class="search-tip-example">${escapeHtml(tip.example)}</kbd>
+          <kbd class="search-tip-example">${escapeHtml(example)}</kbd>
         </div>`;
     });
 
@@ -373,7 +383,7 @@ export class SearchModal {
     let globalIndex = 0;
 
     if (this.commandResults.length > 0) {
-      html += '<div class="search-section-header">Commands</div>';
+      html += `<div class="search-section-header">${t('modals.search.commands')}</div>`;
       for (const { command } of this.commandResults) {
         html += `
           <div class="search-result-item command-item ${globalIndex === this.selectedIndex ? 'selected' : ''}" data-index="${globalIndex}" data-command="${command.id}">
@@ -386,7 +396,7 @@ export class SearchModal {
         globalIndex++;
       }
       if (this.results.length > 0) {
-        html += '<div class="search-section-header">Results</div>';
+        html += `<div class="search-section-header">${t('modals.search.results')}</div>`;
       }
     }
 
