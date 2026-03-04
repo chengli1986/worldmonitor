@@ -139,6 +139,7 @@
     "downloadApp": "Download App",
     "fullscreen": "Fullscreen",
     "pinMap": "Pin map to top",
+    "selectRegion": "Select Region",
     "viewOnGitHub": "View on GitHub",
     "filterSources": "Filter sources...",
     "sourcesEnabled": "{{enabled}}/{{total}} enabled",

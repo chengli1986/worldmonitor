@@ -125,6 +125,9 @@ export class PanelLayoutManager implements AppModule {
     this.ctx.container.innerHTML = `
       <div class="header">
         <div class="header-left">
+          <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
           <div class="variant-switcher">${(() => {
         const local = this.ctx.isDesktopApp || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
         const vHref = (v: string, prod: string) => local || SITE_VARIANT === v ? '#' : prod;
@@ -193,6 +196,9 @@ export class PanelLayoutManager implements AppModule {
               <option value="oceania">${t('components.deckgl.views.oceania')}</option>
             </select>
           </div>
+          <button class="mobile-search-btn" id="mobileSearchBtn" aria-label="${t('header.search')}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
         </div>
         <div class="header-right">
           ${this.ctx.isDesktopApp ? '' : `<div class="download-wrapper" id="downloadWrapper">
@@ -213,6 +219,72 @@ export class PanelLayoutManager implements AppModule {
           ${SITE_VARIANT === 'happy' ? `<button class="tv-mode-btn" id="tvModeBtn" title="TV Mode (Shift+T)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></button>` : ''}
           <span id="unifiedSettingsMount"></span>
         </div>
+      </div>
+      <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+      <nav class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+          <span class="mobile-menu-title">WORLD MONITOR</span>
+          <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="mobile-menu-divider"></div>
+        ${(() => {
+        const variants = [
+          { key: 'full', icon: '🌍', label: t('header.world') },
+          { key: 'tech', icon: '💻', label: t('header.tech') },
+          { key: 'finance', icon: '📈', label: t('header.finance') },
+        ];
+        if (SITE_VARIANT === 'happy') variants.push({ key: 'happy', icon: '☀️', label: 'Good News' });
+        return variants.map(v =>
+          `<button class="mobile-menu-item mobile-menu-variant ${v.key === SITE_VARIANT ? 'active' : ''}" data-variant="${v.key}">
+            <span class="mobile-menu-item-icon">${v.icon}</span>
+            <span class="mobile-menu-item-label">${v.label}</span>
+            ${v.key === SITE_VARIANT ? '<span class="mobile-menu-check">✓</span>' : ''}
+          </button>`
+        ).join('');
+      })()}
+        <div class="mobile-menu-divider"></div>
+        <button class="mobile-menu-item" id="mobileMenuRegion">
+          <span class="mobile-menu-item-icon">🌐</span>
+          <span class="mobile-menu-item-label">${t('components.deckgl.views.global')}</span>
+          <span class="mobile-menu-chevron">▸</span>
+        </button>
+        <div class="mobile-menu-divider"></div>
+        <button class="mobile-menu-item" id="mobileMenuSettings">
+          <span class="mobile-menu-item-icon">⚙️</span>
+          <span class="mobile-menu-item-label">${t('header.settings')}</span>
+        </button>
+        <button class="mobile-menu-item" id="mobileMenuTheme">
+          <span class="mobile-menu-item-icon">${getCurrentTheme() === 'dark' ? '☀️' : '🌙'}</span>
+          <span class="mobile-menu-item-label">${getCurrentTheme() === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+        </button>
+        <a class="mobile-menu-item" href="https://x.com/eliehabib" target="_blank" rel="noopener">
+          <span class="mobile-menu-item-icon"><svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span>
+          <span class="mobile-menu-item-label">@eliehabib</span>
+        </a>
+        <div class="mobile-menu-divider"></div>
+        <div class="mobile-menu-version">v${__APP_VERSION__}</div>
+      </nav>
+      <div class="region-sheet-backdrop" id="regionSheetBackdrop"></div>
+      <div class="region-bottom-sheet" id="regionBottomSheet">
+        <div class="region-sheet-header">${t('header.selectRegion')}</div>
+        <div class="region-sheet-divider"></div>
+        ${[
+        { value: 'global', label: t('components.deckgl.views.global') },
+        { value: 'america', label: t('components.deckgl.views.americas') },
+        { value: 'mena', label: t('components.deckgl.views.mena') },
+        { value: 'eu', label: t('components.deckgl.views.europe') },
+        { value: 'asia', label: t('components.deckgl.views.asia') },
+        { value: 'latam', label: t('components.deckgl.views.latam') },
+        { value: 'africa', label: t('components.deckgl.views.africa') },
+        { value: 'oceania', label: t('components.deckgl.views.oceania') },
+      ].map(r =>
+        `<button class="region-sheet-option ${r.value === 'global' ? 'active' : ''}" data-region="${r.value}">
+          <span>${r.label}</span>
+          <span class="region-sheet-check">${r.value === 'global' ? '✓' : ''}</span>
+        </button>`
+      ).join('')}
       </div>
       <div class="main-content">
         <div class="map-section" id="mapSection">

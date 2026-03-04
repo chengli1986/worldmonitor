@@ -83,6 +83,7 @@ export class EventHandlerManager implements AppModule {
   private boundMapEndResizeHandler: (() => void) | null = null;
   private boundMapResizeVisChangeHandler: (() => void) | null = null;
   private boundMapFullscreenEscHandler: ((e: KeyboardEvent) => void) | null = null;
+  private boundMobileMenuKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private idleTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private snapshotIntervalId: ReturnType<typeof setInterval> | null = null;
   private clockIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -224,6 +225,10 @@ export class EventHandlerManager implements AppModule {
       document.removeEventListener('keydown', this.boundMapFullscreenEscHandler);
       this.boundMapFullscreenEscHandler = null;
     }
+    if (this.boundMobileMenuKeyHandler) {
+      document.removeEventListener('keydown', this.boundMobileMenuKeyHandler);
+      this.boundMobileMenuKeyHandler = null;
+    }
     this.ctx.tvMode?.destroy();
     this.ctx.tvMode = null;
     this.ctx.unifiedSettings?.destroy();
@@ -231,10 +236,12 @@ export class EventHandlerManager implements AppModule {
   }
 
   private setupEventListeners(): void {
-    document.getElementById('searchBtn')?.addEventListener('click', () => {
+    const openSearch = () => {
       this.callbacks.updateSearchIndex();
       this.ctx.searchModal?.open();
-    });
+    };
+    document.getElementById('searchBtn')?.addEventListener('click', openSearch);
+    document.getElementById('mobileSearchBtn')?.addEventListener('click', openSearch);
 
     document.getElementById('copyLinkBtn')?.addEventListener('click', async () => {
       const shareUrl = this.getShareUrl();
@@ -339,8 +346,11 @@ export class EventHandlerManager implements AppModule {
     this.boundThemeChangedHandler = () => {
       this.ctx.map?.render();
       this.updateHeaderThemeIcon();
+      this.updateMobileMenuThemeItem();
     };
     window.addEventListener('theme-changed', this.boundThemeChangedHandler);
+
+    this.setupMobileMenu();
 
     if (this.ctx.isDesktopApp) {
       if (this.boundDesktopExternalLinkHandler) {
@@ -370,6 +380,129 @@ export class EventHandlerManager implements AppModule {
       };
       document.addEventListener('click', this.boundDesktopExternalLinkHandler, true);
     }
+  }
+
+  private setupMobileMenu(): void {
+    const hamburger = document.getElementById('hamburgerBtn');
+    const overlay = document.getElementById('mobileMenuOverlay');
+    const menu = document.getElementById('mobileMenu');
+    const closeBtn = document.getElementById('mobileMenuClose');
+    if (!hamburger || !overlay || !menu || !closeBtn) return;
+
+    hamburger.addEventListener('click', () => this.openMobileMenu());
+    overlay.addEventListener('click', () => this.closeMobileMenu());
+    closeBtn.addEventListener('click', () => this.closeMobileMenu());
+
+    const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    menu.querySelectorAll<HTMLButtonElement>('.mobile-menu-variant').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const variant = btn.dataset.variant;
+        if (variant && variant !== SITE_VARIANT) {
+          if (this.ctx.isDesktopApp || isLocalDev) {
+            trackVariantSwitch(SITE_VARIANT, variant);
+            localStorage.setItem('worldmonitor-variant', variant);
+            window.location.reload();
+          } else {
+            const hosts: Record<string, string> = {
+              full: 'https://worldmonitor.app',
+              tech: 'https://tech.worldmonitor.app',
+              finance: 'https://finance.worldmonitor.app',
+              happy: 'https://happy.worldmonitor.app',
+            };
+            if (hosts[variant]) window.location.href = hosts[variant];
+          }
+        }
+      });
+    });
+
+    document.getElementById('mobileMenuRegion')?.addEventListener('click', () => {
+      this.closeMobileMenu();
+      this.openRegionSheet();
+    });
+
+    document.getElementById('mobileMenuSettings')?.addEventListener('click', () => {
+      this.closeMobileMenu();
+      this.ctx.unifiedSettings?.open();
+    });
+
+    document.getElementById('mobileMenuTheme')?.addEventListener('click', () => {
+      this.closeMobileMenu();
+      const next = getCurrentTheme() === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+      this.updateHeaderThemeIcon();
+      trackThemeChanged(next);
+    });
+
+    const sheetBackdrop = document.getElementById('regionSheetBackdrop');
+    sheetBackdrop?.addEventListener('click', () => this.closeRegionSheet());
+
+    const sheet = document.getElementById('regionBottomSheet');
+    sheet?.querySelectorAll<HTMLButtonElement>('.region-sheet-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const region = opt.dataset.region;
+        if (!region) return;
+        this.ctx.map?.setView(region as MapView);
+        trackMapViewChange(region);
+        const regionSelect = document.getElementById('regionSelect') as HTMLSelectElement;
+        if (regionSelect) regionSelect.value = region;
+        sheet.querySelectorAll('.region-sheet-option').forEach(o => {
+          o.classList.toggle('active', o === opt);
+          const check = o.querySelector('.region-sheet-check');
+          if (check) check.textContent = o === opt ? '✓' : '';
+        });
+        const menuRegionLabel = document.getElementById('mobileMenuRegion')?.querySelector('.mobile-menu-item-label');
+        if (menuRegionLabel) menuRegionLabel.textContent = opt.querySelector('span')?.textContent ?? '';
+        this.closeRegionSheet();
+      });
+    });
+
+    this.boundMobileMenuKeyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (sheet?.classList.contains('open')) {
+          this.closeRegionSheet();
+        } else if (menu.classList.contains('open')) {
+          this.closeMobileMenu();
+        }
+      }
+    };
+    document.addEventListener('keydown', this.boundMobileMenuKeyHandler);
+  }
+
+  private openMobileMenu(): void {
+    const overlay = document.getElementById('mobileMenuOverlay');
+    const menu = document.getElementById('mobileMenu');
+    if (!overlay || !menu) return;
+    overlay.classList.add('open');
+    requestAnimationFrame(() => menu.classList.add('open'));
+    document.body.style.overflow = 'hidden';
+  }
+
+  private closeMobileMenu(): void {
+    const overlay = document.getElementById('mobileMenuOverlay');
+    const menu = document.getElementById('mobileMenu');
+    if (!overlay || !menu) return;
+    menu.classList.remove('open');
+    overlay.classList.remove('open');
+    const sheetOpen = document.getElementById('regionBottomSheet')?.classList.contains('open');
+    if (!sheetOpen) document.body.style.overflow = '';
+  }
+
+  private openRegionSheet(): void {
+    const backdrop = document.getElementById('regionSheetBackdrop');
+    const sheet = document.getElementById('regionBottomSheet');
+    if (!backdrop || !sheet) return;
+    backdrop.classList.add('open');
+    requestAnimationFrame(() => sheet.classList.add('open'));
+    document.body.style.overflow = 'hidden';
+  }
+
+  private closeRegionSheet(): void {
+    const backdrop = document.getElementById('regionSheetBackdrop');
+    const sheet = document.getElementById('regionBottomSheet');
+    if (!backdrop || !sheet) return;
+    sheet.classList.remove('open');
+    backdrop.classList.remove('open');
+    document.body.style.overflow = '';
   }
 
   private setupIdleDetection(): void {
@@ -566,6 +699,16 @@ export class EventHandlerManager implements AppModule {
     btn.innerHTML = isDark
       ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
       : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>';
+  }
+
+  private updateMobileMenuThemeItem(): void {
+    const btn = document.getElementById('mobileMenuTheme');
+    if (!btn) return;
+    const isDark = getCurrentTheme() === 'dark';
+    const icon = btn.querySelector('.mobile-menu-item-icon');
+    const label = btn.querySelector('.mobile-menu-item-label');
+    if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+    if (label) label.textContent = isDark ? 'Light Mode' : 'Dark Mode';
   }
 
   startHeaderClock(): void {
