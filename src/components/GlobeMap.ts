@@ -393,7 +393,7 @@ export class GlobeMap {
         renderer.setPixelRatio(pr);
         const w = (width ?? this.container.clientWidth) || window.innerWidth;
         const h = (height ?? this.container.clientHeight) || window.innerHeight;
-        renderer.setSize(w, h, false);
+        if (w > 0 && h > 0) globe.width(w).height(h);
       } catch {
         // best-effort
       }
@@ -442,7 +442,6 @@ export class GlobeMap {
       if (!this.globe || this.destroyed) return;
       const w = this.container.clientWidth;
       const h = this.container.clientHeight;
-      if (w > 0 && h > 0) this.globe.width(w).height(h);
       applyRenderQuality(undefined, w, h);
     });
     this.resizeObserver.observe(this.container);
