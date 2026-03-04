@@ -63,6 +63,7 @@ const RPC_CACHE_TIER: Record<string, CacheTier> = {
   '/api/aviation/v1/list-aviation-news': 'slow',
   '/api/market/v1/get-country-stock-index': 'slow',
 
+  '/api/natural/v1/list-natural-events': 'slow',
   '/api/wildfire/v1/list-fire-detections': 'static',
   '/api/maritime/v1/list-navigational-warnings': 'static',
   '/api/supply-chain/v1/get-shipping-rates': 'static',

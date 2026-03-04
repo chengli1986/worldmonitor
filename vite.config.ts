@@ -196,6 +196,7 @@ function sebufApiPlugin(): Plugin {
       givingServerMod, givingHandlerMod,
       tradeServerMod, tradeHandlerMod,
       supplyChainServerMod, supplyChainHandlerMod,
+      naturalServerMod, naturalHandlerMod,
     ] = await Promise.all([
         import('./server/router'),
         import('./server/cors'),
@@ -242,6 +243,8 @@ function sebufApiPlugin(): Plugin {
         import('./server/worldmonitor/trade/v1/handler'),
         import('./src/generated/server/worldmonitor/supply_chain/v1/service_server'),
         import('./server/worldmonitor/supply-chain/v1/handler'),
+        import('./src/generated/server/worldmonitor/natural/v1/service_server'),
+        import('./server/worldmonitor/natural/v1/handler'),
       ]);
 
     const serverOptions = { onError: errorMod.mapErrorToResponse };
@@ -267,6 +270,7 @@ function sebufApiPlugin(): Plugin {
       ...givingServerMod.createGivingServiceRoutes(givingHandlerMod.givingHandler, serverOptions),
       ...tradeServerMod.createTradeServiceRoutes(tradeHandlerMod.tradeHandler, serverOptions),
       ...supplyChainServerMod.createSupplyChainServiceRoutes(supplyChainHandlerMod.supplyChainHandler, serverOptions),
+      ...naturalServerMod.createNaturalServiceRoutes(naturalHandlerMod.naturalHandler, serverOptions),
     ];
     cachedCorsMod = corsMod;
     return routerMod.createRouter(allRoutes);
