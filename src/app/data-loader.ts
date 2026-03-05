@@ -932,10 +932,8 @@ export class DataLoaderManager implements AppModule {
         ? await clusterNewsHybrid(this.ctx.allNews)
         : await analysisWorker.clusterNews(this.ctx.allNews);
 
-      if (this.ctx.latestClusters.length > 0) {
-        const insightsPanel = this.ctx.panels['insights'] as InsightsPanel | undefined;
-        insightsPanel?.updateInsights(this.ctx.latestClusters);
-      }
+      const insightsPanel = this.ctx.panels['insights'] as InsightsPanel | undefined;
+      insightsPanel?.updateInsights(this.ctx.latestClusters);
 
       const geoLocated = this.ctx.latestClusters
         .filter((c): c is typeof c & { lat: number; lon: number } => c.lat != null && c.lon != null)
@@ -951,6 +949,8 @@ export class DataLoaderManager implements AppModule {
       }
     } catch (error) {
       console.error('[App] Clustering failed, clusters unchanged:', error);
+      const insightsPanel = this.ctx.panels['insights'] as InsightsPanel | undefined;
+      insightsPanel?.updateInsights([]);
     }
 
     // Happy variant: run multi-stage positive news pipeline + map layers
