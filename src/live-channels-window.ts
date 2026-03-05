@@ -52,6 +52,9 @@ function parseYouTubeInput(raw: string): { handle: string } | { videoId: string 
   // youtube.com/c/ChannelName or /channel/ID
   const channelMatch = url.pathname.match(/^\/(c|channel)\/([\w.-]+)$/);
   if (channelMatch) return { handle: `@${channelMatch[2]}` };
+  // youtube.com/ChannelName (bare path, no @/c/channel prefix)
+  const bareMatch = url.pathname.match(/^\/([\w.-]{3,30})$/);
+  if (bareMatch) return { handle: `@${bareMatch[1]}` };
 
   return null;
 }
@@ -595,13 +598,6 @@ export async function initLiveChannelsWindow(containerEl?: HTMLElement): Promise
       const res = await fetch(`${baseUrl}/api/youtube/live?channel=${encodeURIComponent(handle)}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.channelExists === false && !data.error) {
-          if (handleInput) {
-            handleInput.classList.add('invalid');
-            handleInput.setAttribute('title', t('components.liveNews.channelNotFound') ?? 'YouTube channel not found');
-          }
-          return;
-        }
         resolvedName = data.channelName || '';
       }
       // Non-OK status (429, 5xx) or ambiguous response — allow adding anyway
