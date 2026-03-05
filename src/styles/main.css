@@ -13563,6 +13563,27 @@ a.prediction-link:hover {
   display: none;
 }
 
+/* Map author credit badge (bottom-left, styled like BETA badge) */
+.map-container::before {
+  content: '© Elie Habib · Someone™';
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  z-index: 20;
+  padding: 2px 8px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
 /* Map tile attribution */
 .map-attribution {
   position: absolute;
