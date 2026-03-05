@@ -1128,9 +1128,11 @@ export class GlobeMap {
           this.layers[layer] = checked;
           this.flushLayerChannels(layer);
           this.onLayerChangeCb?.(layer, checked, 'user');
+          this.enforceLayerLimit();
         }
       });
     });
+    this.enforceLayerLimit();
 
     const collapseBtn = el.querySelector('.toggle-collapse');
     const list = el.querySelector('.toggle-list') as HTMLElement | null;
@@ -1534,7 +1536,26 @@ export class GlobeMap {
   public enableLayer(layer: keyof MapLayers): void {
     if (this.layers[layer]) return;
     (this.layers as any)[layer] = true;
+    const toggle = this.layerTogglesEl?.querySelector(`.layer-toggle[data-layer="${layer}"] input`) as HTMLInputElement | null;
+    if (toggle) toggle.checked = true;
     this.flushLayerChannels(layer);
+    this.enforceLayerLimit();
+  }
+
+  private enforceLayerLimit(): void {
+    if (!this.layerTogglesEl) return;
+    const MAX_GLOBE_LAYERS = 6;
+    const allToggles = this.layerTogglesEl.querySelectorAll<HTMLInputElement>('.layer-toggle input');
+    const activeCount = Array.from(allToggles).filter(i => i.checked).length;
+    allToggles.forEach(i => {
+      if (!i.checked) {
+        i.disabled = activeCount >= MAX_GLOBE_LAYERS;
+        i.closest('.layer-toggle')?.classList.toggle('limit-reached', activeCount >= MAX_GLOBE_LAYERS);
+      } else {
+        i.disabled = false;
+        i.closest('.layer-toggle')?.classList.remove('limit-reached');
+      }
+    });
   }
 
   // ─── Camera / navigation ──────────────────────────────────────────────────

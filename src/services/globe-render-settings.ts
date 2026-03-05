@@ -7,12 +7,13 @@ export const GLOBE_RENDER_SCALE_OPTIONS: {
   value: GlobeRenderScale;
   labelKey: string;
   fallbackLabel: string;
+  disabled?: boolean;
 }[] = [
   { value: 'auto', labelKey: 'components.insights.globeRenderScaleOptions.auto', fallbackLabel: 'Auto (device)' },
   { value: '1', labelKey: 'components.insights.globeRenderScaleOptions.1', fallbackLabel: 'Eco (1x)' },
   { value: '1.5', labelKey: 'components.insights.globeRenderScaleOptions.1_5', fallbackLabel: 'Sharp (1.5x)' },
-  { value: '2', labelKey: 'components.insights.globeRenderScaleOptions.2', fallbackLabel: '4K (2x)' },
-  { value: '3', labelKey: 'components.insights.globeRenderScaleOptions.3', fallbackLabel: 'Insane (3x)' },
+  { value: '2', labelKey: 'components.insights.globeRenderScaleOptions.2', fallbackLabel: '4K (2x)', disabled: true },
+  { value: '3', labelKey: 'components.insights.globeRenderScaleOptions.3', fallbackLabel: 'Insane (3x)', disabled: true },
 ];
 
 export function getGlobeRenderScale(): GlobeRenderScale {
@@ -45,10 +46,10 @@ export function subscribeGlobeRenderScaleChange(cb: (scale: GlobeRenderScale) =>
 
 export function resolveGlobePixelRatio(scale: GlobeRenderScale): number {
   const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
-  if (scale === 'auto') return Math.min(2, Math.max(1, dpr));
+  if (scale === 'auto') return Math.min(1.5, Math.max(1, dpr));
   const num = Number(scale);
   if (!Number.isFinite(num) || num <= 0) return 1;
-  return Math.min(3, Math.max(1, num));
+  return Math.min(1.5, Math.max(1, num));
 }
 
 export interface GlobePerformanceProfile {

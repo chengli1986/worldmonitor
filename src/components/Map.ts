@@ -431,12 +431,30 @@ export class MapComponent {
       return key ? t(key) : layer;
     };
 
+    const MAX_SVG_LAYERS = 9;
+    const enforceLayerLimit = () => {
+      const allBtns = toggles.querySelectorAll<HTMLButtonElement>('.layer-toggle');
+      const activeCount = Array.from(allBtns).filter(b => b.classList.contains('active')).length;
+      allBtns.forEach(b => {
+        if (!b.classList.contains('active')) {
+          b.disabled = activeCount >= MAX_SVG_LAYERS;
+          b.classList.toggle('limit-reached', activeCount >= MAX_SVG_LAYERS);
+        } else {
+          b.disabled = false;
+          b.classList.remove('limit-reached');
+        }
+      });
+    };
+
     layers.forEach((layer) => {
       const btn = document.createElement('button');
       btn.className = `layer-toggle ${this.state.layers[layer] ? 'active' : ''}`;
       btn.dataset.layer = layer;
       btn.textContent = getLayerLabel(layer);
-      btn.addEventListener('click', () => this.toggleLayer(layer));
+      btn.addEventListener('click', () => {
+        this.toggleLayer(layer);
+        enforceLayerLimit();
+      });
       toggles.appendChild(btn);
     });
 
@@ -448,6 +466,7 @@ export class MapComponent {
     helpBtn.setAttribute('aria-label', t('components.deckgl.layerGuide'));
     helpBtn.addEventListener('click', () => this.showLayerHelp());
     toggles.appendChild(helpBtn);
+    enforceLayerLimit();
 
     return toggles;
   }

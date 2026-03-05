@@ -387,9 +387,10 @@ export class UnifiedSettings {
     html += `<select class="unified-settings-select" id="us-globe-render-scale">`;
     for (const opt of GLOBE_RENDER_SCALE_OPTIONS) {
       const selected = opt.value === globeScale ? ' selected' : '';
+      const disabled = opt.disabled ? ' disabled' : '';
       const translatedLabel = t(opt.labelKey);
       const label = translatedLabel === opt.labelKey ? opt.fallbackLabel : translatedLabel;
-      html += `<option value="${opt.value}"${selected}>${label}</option>`;
+      html += `<option value="${opt.value}"${selected}${disabled}>${label}</option>`;
     }
     html += `</select>`;
 

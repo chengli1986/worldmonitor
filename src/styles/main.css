@@ -13375,6 +13375,16 @@ a.prediction-link:hover {
   border-color: rgba(68, 255, 136, 0.2);
 }
 
+.deckgl-layer-toggles .layer-toggle.limit-reached {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.layer-toggles:not(.deckgl-layer-toggles) .layer-toggle.limit-reached {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
 /* deck.gl Legend - horizontal bar at bottom center */
 .deckgl-legend {
   position: absolute;

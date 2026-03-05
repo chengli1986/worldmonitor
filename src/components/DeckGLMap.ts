@@ -3440,14 +3440,15 @@ export class DeckGLMap {
           if (layer === 'flights') this.manageAircraftTimer((input as HTMLInputElement).checked);
           this.render();
           this.onLayerChange?.(layer, (input as HTMLInputElement).checked, 'user');
-          // Show/hide CII legend when toggling the CII layer
           if (layer === 'ciiChoropleth') {
             const ciiLeg = this.container.querySelector('#ciiChoroplethLegend') as HTMLElement | null;
             if (ciiLeg) ciiLeg.style.display = (input as HTMLInputElement).checked ? 'block' : 'none';
           }
+          this.enforceLayerLimit();
         }
       });
     });
+    this.enforceLayerLimit();
 
     // Help button
     const helpBtn = toggles.querySelector('.layer-help-btn');
@@ -4440,6 +4441,25 @@ export class DeckGLMap {
     setGeoAlertGetter(getAlertsNearLocation);
   }
 
+  private enforceLayerLimit(): void {
+    const MAX_FLAT_LAYERS = 9;
+    const togglesEl = this.container.querySelector('.deckgl-layer-toggles');
+    if (!togglesEl) return;
+    const visibleToggles = Array.from(togglesEl.querySelectorAll<HTMLInputElement>('.layer-toggle input'))
+      .filter(i => (i.closest('.layer-toggle') as HTMLElement)?.style.display !== 'none');
+    const allToggles = visibleToggles;
+    const activeCount = allToggles.filter(i => i.checked).length;
+    allToggles.forEach(i => {
+      if (!i.checked) {
+        i.disabled = activeCount >= MAX_FLAT_LAYERS;
+        i.closest('.layer-toggle')?.classList.toggle('limit-reached', activeCount >= MAX_FLAT_LAYERS);
+      } else {
+        i.disabled = false;
+        i.closest('.layer-toggle')?.classList.remove('limit-reached');
+      }
+    });
+  }
+
   // UI visibility methods
   public hideLayerToggle(layer: keyof MapLayers): void {
     const toggle = this.container.querySelector(`.layer-toggle[data-layer="${layer}"]`);
@@ -4483,6 +4503,7 @@ export class DeckGLMap {
       if (toggle) toggle.checked = true;
       this.render();
       this.onLayerChange?.(layer, true, 'programmatic');
+      this.enforceLayerLimit();
     }
   }
 
@@ -4493,6 +4514,7 @@ export class DeckGLMap {
     if (toggle) toggle.checked = this.state.layers[layer];
     this.render();
     this.onLayerChange?.(layer, this.state.layers[layer], 'programmatic');
+    this.enforceLayerLimit();
   }
 
   // Get center coordinates for programmatic popup positioning
