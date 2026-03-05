@@ -167,6 +167,21 @@ Sentry.init({
     /Qt\(\) is not a function/,
     /out of memory/,
     /Could not connect to the server/,
+    /shaderSource must be an instance of WebGLShader/,
+    /Failed to initialize WebGL/,
+    /opacityVertexArray\.length/,
+    /Length of new data is \d+, which doesn't match current length of/,
+    /^AJAXError:.*(?:Load failed|Unauthorized|\(401\))/,
+    /^NetworkError: Load failed$/,
+    /^A network error occurred\.?$/,
+    /nmhCrx is not defined/,
+    /navigationPerformanceLoggerJavascriptInterface/,
+    /jQuery is not defined/,
+    /illegal UTF-16 sequence/,
+    /detectIncognito/,
+    /Cannot read properties of null \(reading '__uv'\)/,
+    /Can't find variable: p\d+/,
+    /^timeout$/,
   ],
   beforeSend(event) {
     const msg = event.exception?.values?.[0]?.value ?? '';
@@ -187,12 +202,18 @@ Sentry.init({
       const hasSourceMapped = nonSentryFrames.some(f => /\.(ts|tsx)$/.test(f.filename ?? '') || /^src\//.test(f.filename ?? ''));
       if (!hasSourceMapped) return null;
     }
+    // Suppress Three.js OrbitControls touch crashes (finger lifted during pinch-zoom)
+    if (/undefined is not an object \(evaluating 't\.x'\)|Cannot read properties of undefined \(reading 'x'\)/.test(msg)) {
+      if (frames.some(f => /_handleTouchStart|Dolly|eie|jse/.test(f.function ?? ''))) return null;
+    }
     // Suppress deck.gl/maplibre null-access crashes with no usable stack trace (requestAnimationFrame wrapping)
     if (/null is not an object \(evaluating '\w{1,3}\.(id|type|style)'\)/.test(msg) && frames.length === 0) return null;
     // Suppress TypeErrors from anonymous/injected scripts (no real source files)
     if (/^TypeError:/.test(msg) && frames.length > 0 && frames.every(f => !f.filename || f.filename === '<anonymous>' || /^blob:/.test(f.filename))) return null;
     // Suppress errors originating entirely from blob: URLs (browser extensions)
     if (frames.length > 0 && frames.every(f => /^blob:/.test(f.filename ?? ''))) return null;
+    // Suppress errors originating from UV proxy (Ultraviolet service worker)
+    if (frames.some(f => /\/uv\/service\//.test(f.filename ?? '') || /uv\.handler/.test(f.filename ?? ''))) return null;
     // Suppress YouTube IFrame widget API internal errors
     if (frames.some(f => /www-widgetapi\.js/.test(f.filename ?? ''))) return null;
     return event;
