@@ -633,9 +633,16 @@ const COMMODITY_PANELS: Record<string, PanelConfig> = {
   'supply-chain': { name: 'Supply Chain & Logistics', enabled: true, priority: 1 },
   'commodity-regulation': { name: 'Regulation & Policy', enabled: true, priority: 1 },
   markets: { name: 'Commodity Markets', enabled: true, priority: 1 },
+  commodities: { name: 'Live Commodity Prices', enabled: true, priority: 1 },
+  heatmap: { name: 'Sector Heatmap', enabled: true, priority: 1 },
   'macro-signals': { name: 'Market Radar', enabled: true, priority: 1 },
   'trade-policy': { name: 'Trade Policy', enabled: true, priority: 1 },
   economic: { name: 'Economic Indicators', enabled: true, priority: 1 },
+  'gulf-economies': { name: 'Gulf & OPEC Economies', enabled: true, priority: 1 },
+  'gcc-investments': { name: 'GCC Resource Investments', enabled: true, priority: 2 },
+  climate: { name: 'Climate & Weather Impact', enabled: true, priority: 2 },
+  'satellite-fires': { name: 'Fires & Operational Risk', enabled: true, priority: 2 },
+  'airline-intel': { name: 'Airline Intelligence', enabled: true, priority: 2 },
   finance: { name: 'Financial News', enabled: true, priority: 2 },
   crypto: { name: 'Crypto', enabled: true, priority: 2 },
   'etf-flows': { name: 'Gold ETF Tracker', enabled: true, priority: 2 },
@@ -653,7 +660,7 @@ const COMMODITY_MAP_LAYERS: MapLayers = {
   cables: true,
   pipelines: true,
   hotspots: false,
-  ais: false,
+  ais: true,            // Commodity shipping, tanker routes, bulk carriers
   nuclear: false,
   irradiators: false,
   sanctions: true,
@@ -669,11 +676,11 @@ const COMMODITY_MAP_LAYERS: MapLayers = {
   natural: true,
   spaceports: false,
   minerals: true,
-  fires: false,
+  fires: true,          // Fires near mining/forestry operations
   // Data source layers
   ucdpEvents: false,
   displacement: false,
-  climate: false,
+  climate: true,         // Climate events disrupt supply chains
   // Tech layers (disabled)
   startupHubs: false,
   cloudRegions: false,

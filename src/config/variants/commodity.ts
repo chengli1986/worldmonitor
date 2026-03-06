@@ -33,6 +33,13 @@ export const DEFAULT_PANELS: Record<string, PanelConfig> = {
   // Operations & supply
   'supply-chain': { name: 'Supply Chain & Shipping', enabled: true, priority: 2 },
   'commodity-regulation': { name: 'Mining Policy & ESG', enabled: true, priority: 2 },
+  // Regional / macro
+  'gulf-economies': { name: 'Gulf & OPEC Economies', enabled: true, priority: 1 },
+  'gcc-investments': { name: 'GCC Resource Investments', enabled: true, priority: 2 },
+  // Environmental & operational risk
+  climate: { name: 'Climate & Weather Impact', enabled: true, priority: 2 },
+  'satellite-fires': { name: 'Fires & Operational Risk', enabled: true, priority: 2 },
+  'airline-intel': { name: 'Airline Intelligence', enabled: true, priority: 2 },
   // Tracking
   monitors: { name: 'My Monitors', enabled: true, priority: 2 },
 };
@@ -70,18 +77,18 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
   // Protests / civil unrest
   protests: false,
   // Transport / tracking
-  ais: false,
+  ais: true,              // Commodity shipping, tanker routes, bulk carriers
   flights: false,
-  // Infrastructure (non-commodity)
-  cables: false,
-  outages: false,
+  // Infrastructure
+  cables: true,           // Undersea cables (trade comms)
+  outages: true,          // Power outages affect operations
   datacenters: false,
   // Sanctions / financial context
-  sanctions: false,
-  economic: false,
-  // Environmental
-  fires: false,
-  climate: false,
+  sanctions: true,        // Sanctions directly impact commodity trade
+  economic: true,         // Economic centers = commodity demand signals
+  // Environmental / operational risk
+  fires: true,            // Fires near mining/forestry operations
+  climate: true,          // Climate events disrupt supply chains
   // Tech variant layers
   startupHubs: false,
   cloudRegions: false,
