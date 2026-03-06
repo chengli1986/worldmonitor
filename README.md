@@ -68,7 +68,6 @@ All four variants run from a single codebase — switch between them with one cl
 
 ### Maps & Visualization
 
-
 - **Dual Map Engine** — 3D globe (globe.gl + Three.js) and WebGL flat map (deck.gl), runtime-switchable with 45 shared data layers. Multiple tile providers (OpenFreeMap, CARTO, self-hosted PMTiles) selectable in Settings. [Details →](./docs/MAP_ENGINE.md)
 - **45 toggleable data layers** — conflicts, bases, cables, pipelines, flights, vessels, protests, fires, earthquakes, datacenters, and more across all variants
 - **8 regional presets** — Global, Americas, Europe, MENA, Asia, Africa, Oceania, Latin America with time filtering (1h–7d)
