@@ -71,11 +71,19 @@ const SEED_META = {
 // Standalone keys that are populated on-demand by RPC handlers (not seeds).
 // Empty = WARN not CRIT since they only exist after first request.
 const ON_DEMAND_KEYS = new Set([
-  'theaterPostureLive', 'theaterPostureBackup', 'riskScoresLive',
+  'riskScoresLive',
   'usniFleet', 'usniFleetStale', 'positiveEventsLive', 'cableHealth',
-  'theaterPosture', 'bisPolicy', 'bisExchange', 'bisCredit',
+  'bisPolicy', 'bisExchange', 'bisCredit',
   'serviceStatuses', 'macroSignals', 'shippingRates', 'chokepoints', 'minerals', 'giving',
 ]);
+
+// Cascade groups: if any key in the group has data, all empty siblings are OK.
+// Theater posture uses live → stale → backup fallback chain.
+const CASCADE_GROUPS = {
+  theaterPosture:       ['theaterPosture', 'theaterPostureLive', 'theaterPostureBackup'],
+  theaterPostureLive:   ['theaterPosture', 'theaterPostureLive', 'theaterPostureBackup'],
+  theaterPostureBackup: ['theaterPosture', 'theaterPostureLive', 'theaterPostureBackup'],
+};
 
 const NEG_SENTINEL = '__WM_NEG__';
 
@@ -108,7 +116,7 @@ function dataSize(parsed) {
                       'papers', 'repos', 'articles', 'signals', 'rates', 'countries',
                       'chokepoints', 'minerals', 'anomalies', 'flows', 'bases',
                       'theaters', 'fleets', 'warnings', 'closures', 'cables',
-                      'airports', 'categories', 'regions']) {
+                      'airports', 'categories', 'regions', 'entries']) {
       if (Array.isArray(parsed[k])) return parsed[k].length;
     }
     return Object.keys(parsed).length;
@@ -207,9 +215,29 @@ export default async function handler(req) {
     const size = dataSize(parsed);
     const isOnDemand = ON_DEMAND_KEYS.has(name);
 
+    // Cascade: if this key is empty but a sibling in the cascade group has data, it's OK.
+    const cascadeSiblings = CASCADE_GROUPS[name];
+    let cascadeCovered = false;
+    if (cascadeSiblings && (!parsed || size === 0)) {
+      for (const sibling of cascadeSiblings) {
+        if (sibling === name) continue;
+        const sibKey = STANDALONE_KEYS[sibling];
+        if (!sibKey) continue;
+        const sibRaw = keyValues.get(sibKey);
+        const sibParsed = parseRedisValue(sibRaw);
+        if (sibParsed && dataSize(sibParsed) > 0) {
+          cascadeCovered = true;
+          break;
+        }
+      }
+    }
+
     let status;
     if (!parsed || raw === NEG_SENTINEL) {
-      if (isOnDemand) {
+      if (cascadeCovered) {
+        status = 'OK_CASCADE';
+        okCount++;
+      } else if (isOnDemand) {
         status = 'EMPTY_ON_DEMAND';
         warnCount++;
       } else {
@@ -217,7 +245,10 @@ export default async function handler(req) {
         critCount++;
       }
     } else if (size === 0) {
-      if (isOnDemand) {
+      if (cascadeCovered) {
+        status = 'OK_CASCADE';
+        okCount++;
+      } else if (isOnDemand) {
         status = 'EMPTY_ON_DEMAND';
         warnCount++;
       } else {

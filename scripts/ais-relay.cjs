@@ -2119,6 +2119,48 @@ async function startPositiveEventsSeedLoop() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Theater Posture Seed — warm-pings Vercel RPC every 10 min
+// so the strategic posture panel always has data in Redis.
+// ─────────────────────────────────────────────────────────────
+const THEATER_POSTURE_SEED_INTERVAL_MS = 600_000; // 10 min
+const THEATER_POSTURE_RPC_URL = 'https://worldmonitor.app/api/military/v1/get-theater-posture';
+
+async function seedTheaterPosture() {
+  try {
+    const resp = await fetch(THEATER_POSTURE_RPC_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': CHROME_UA,
+        Origin: 'https://worldmonitor.app',
+      },
+      body: '{}',
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!resp.ok) {
+      console.warn(`[TheaterPosture] Seed ping failed: HTTP ${resp.status}`);
+      return;
+    }
+    const data = await resp.json();
+    const theaters = data?.theaters?.length || 0;
+    console.log(`[TheaterPosture] Seed ping OK — ${theaters} theaters`);
+  } catch (e) {
+    console.warn('[TheaterPosture] Seed ping error:', e?.message || e);
+  }
+}
+
+function startTheaterPostureSeedLoop() {
+  console.log(`[TheaterPosture] Seed loop starting (interval ${THEATER_POSTURE_SEED_INTERVAL_MS / 1000 / 60}min)`);
+  // Delay initial seed 30s to let the relay start up first (it proxies OpenSky)
+  setTimeout(() => {
+    seedTheaterPosture().catch((e) => console.warn('[TheaterPosture] Initial seed error:', e?.message || e));
+    setInterval(() => {
+      seedTheaterPosture().catch((e) => console.warn('[TheaterPosture] Seed error:', e?.message || e));
+    }, THEATER_POSTURE_SEED_INTERVAL_MS).unref?.();
+  }, 30_000);
+}
+
+// ─────────────────────────────────────────────────────────────
 // GPS/GNSS Jamming Seed — fetches from gpsjam.org, seeds Redis
 // Data updates once per day; we poll every 6 hours.
 // ─────────────────────────────────────────────────────────────
@@ -5442,6 +5484,7 @@ server.listen(PORT, () => {
   // (avoids burning 12 extra AbuseIPDB calls/day from duplicate relay loop)
   startCiiSeedLoop();
   startPositiveEventsSeedLoop();
+  startTheaterPostureSeedLoop();
   startGpsJamSeedLoop();
 });
 
