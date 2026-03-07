@@ -209,7 +209,6 @@ Sentry.init({
     /Attempting to run\(\), but is already running/,
     /Out of range source coordinates for DEM data/,
     /Invalid character: '\\0'/,
-    /parentNode\.insertBefore/,
   ],
   beforeSend(event) {
     const msg = event.exception?.values?.[0]?.value ?? '';
@@ -240,6 +239,8 @@ Sentry.init({
     if (/null is not an object \(evaluating '\w{1,3}\.(id|type|style)'\)/.test(msg) && frames.length === 0) return null;
     // Suppress TypeErrors from anonymous/injected scripts (no real source files)
     if (/^TypeError:/.test(msg) && frames.length > 0 && frames.every(f => !f.filename || f.filename === '<anonymous>' || /^blob:/.test(f.filename))) return null;
+    // Suppress parentNode.insertBefore from injected scripts only (iOS WKWebView)
+    if (/parentNode\.insertBefore/.test(msg) && frames.every(f => !f.filename || f.filename === '<anonymous>' || /^blob:/.test(f.filename))) return null;
     // Suppress errors originating entirely from blob: URLs (browser extensions)
     if (frames.length > 0 && frames.every(f => /^blob:/.test(f.filename ?? ''))) return null;
     // Suppress errors originating from UV proxy (Ultraviolet service worker)

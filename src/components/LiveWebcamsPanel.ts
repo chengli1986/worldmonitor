@@ -326,8 +326,11 @@ export class LiveWebcamsPanel extends Panel {
     const tracker = this.iframeTrackers.get(oldIframe);
     if (!tracker) return;
 
+    if (!oldIframe.parentNode) {
+      this.clearIframeTimeout(oldIframe);
+      return;
+    }
     const freshIframe = this.createIframe(tracker.feed);
-    if (!oldIframe.parentNode) return;
     oldIframe.replaceWith(freshIframe);
     oldIframe.src = 'about:blank';
 

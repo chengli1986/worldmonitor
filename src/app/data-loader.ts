@@ -2020,7 +2020,7 @@ export class DataLoaderManager implements AppModule {
       const hasData = data.policyRates?.length > 0;
       this.ctx.statusPanel?.updateApi('BIS', { status: hasData ? 'ok' : 'error' });
       if (hasData) {
-        dataFreshness.recordUpdate('bis', data.policyRates!.length);
+        dataFreshness.recordUpdate('bis', data.policyRates?.length ?? 0);
       }
     } catch (e) {
       console.error('[App] BIS data failed:', e);
