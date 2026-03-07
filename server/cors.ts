@@ -6,6 +6,7 @@
  */
 
 const PRODUCTION_PATTERNS: RegExp[] = [
+  /^https:\/\/wm\.sinostor\.com\.cn$/,
   /^https:\/\/(.*\.)?worldmonitor\.app$/,
   /^https:\/\/worldmonitor-[a-z0-9-]+-elie-[a-z0-9]+\.vercel\.app$/,
   /^https?:\/\/tauri\.localhost(:\d+)?$/,
