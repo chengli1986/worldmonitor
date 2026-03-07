@@ -14,7 +14,29 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAACnaYgHIyxclu8Tj';
 const PRO_URL = 'https://worldmonitor.app/pro';
 
 declare global {
-  interface Window { turnstile?: { getResponse: (widgetOrId?: string | HTMLElement) => string | undefined; reset: (widgetOrId?: string | HTMLElement) => void; }; }
+  interface Window {
+    turnstile?: {
+      render: (container: string | HTMLElement, opts: Record<string, unknown>) => string;
+      getResponse: (widgetOrId?: string | HTMLElement) => string | undefined;
+      reset: (widgetOrId?: string | HTMLElement) => void;
+    };
+  }
+}
+
+export function renderTurnstileWidgets() {
+  if (!window.turnstile) return;
+  document.querySelectorAll<HTMLElement>('.cf-turnstile:not([data-rendered])').forEach(el => {
+    const widgetId = window.turnstile!.render(el, {
+      sitekey: TURNSTILE_SITE_KEY,
+      theme: 'dark',
+      size: 'compact',
+      callback: (token: string) => { el.dataset.token = token; },
+      'expired-callback': () => { delete el.dataset.token; },
+      'error-callback': () => { delete el.dataset.token; },
+    });
+    el.dataset.rendered = 'true';
+    el.dataset.widgetId = String(widgetId);
+  });
 }
 
 function getRefCode(): string | undefined {
@@ -97,12 +119,7 @@ async function submitWaitlist(email: string, formEl: HTMLFormElement) {
 
   const honeypot = (formEl.querySelector('input[name="website"]') as HTMLInputElement)?.value || '';
   const turnstileWidget = formEl.querySelector('.cf-turnstile') as HTMLElement | null;
-  let turnstileToken = '';
-  try {
-    if (turnstileWidget && window.turnstile) {
-      turnstileToken = window.turnstile.getResponse(turnstileWidget) || '';
-    }
-  } catch { /* widget not rendered yet — API validates server-side */ }
+  const turnstileToken = turnstileWidget?.dataset.token || '';
   const ref = getRefCode();
 
   try {
@@ -117,7 +134,10 @@ async function submitWaitlist(email: string, formEl: HTMLFormElement) {
   } catch (err: any) {
     btn.textContent = err.message === 'Too many requests' ? t('form.tooManyRequests') : t('form.failedTryAgain');
     btn.disabled = false;
-    try { if (turnstileWidget && window.turnstile) window.turnstile.reset(turnstileWidget); } catch { /* noop */ }
+    if (turnstileWidget?.dataset.widgetId && window.turnstile) {
+      window.turnstile.reset(turnstileWidget.dataset.widgetId);
+      delete turnstileWidget.dataset.token;
+    }
     setTimeout(() => { btn.textContent = origText; }, 3000);
   }
 }
@@ -204,7 +224,7 @@ const Hero = () => (
               {t('hero.joinProWaitlist')} <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
-          <div className="cf-turnstile mx-auto" data-sitekey={TURNSTILE_SITE_KEY} data-theme="dark" data-size="compact" />
+          <div className="cf-turnstile mx-auto" />
         </form>
         <div className="flex items-center justify-center gap-4 mt-4">
           <p className="text-xs text-wm-muted font-mono">{t('hero.launchingSoon')}</p>
