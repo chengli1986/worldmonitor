@@ -605,17 +605,22 @@ export class NewsPanel extends Panel {
       }
     });
 
-    this.content.addEventListener('mouseenter', (e) => {
+    this.content.addEventListener('mouseover', (e) => {
       const container = (e.target as HTMLElement).closest<HTMLElement>('.related-assets');
       if (!container) return;
+      const related = (e as MouseEvent).relatedTarget as Node | null;
+      if (related && container.contains(related)) return;
       const context = this.relatedAssetContext.get(container.dataset.clusterId ?? '');
       if (context) this.onRelatedAssetsFocus?.(context.assets, context.origin.label);
-    }, true);
+    });
 
-    this.content.addEventListener('mouseleave', (e) => {
+    this.content.addEventListener('mouseout', (e) => {
       const container = (e.target as HTMLElement).closest<HTMLElement>('.related-assets');
-      if (container) this.onRelatedAssetsClear?.();
-    }, true);
+      if (!container) return;
+      const related = (e as MouseEvent).relatedTarget as Node | null;
+      if (related && container.contains(related)) return;
+      this.onRelatedAssetsClear?.();
+    });
   }
 
   private bindRelatedAssetEvents(): void {
