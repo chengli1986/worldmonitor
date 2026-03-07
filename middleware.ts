@@ -41,6 +41,7 @@ const VARIANT_OG: Record<string, { title: string; description: string; image: st
 
 const ALLOWED_HOSTS = new Set([
   'worldmonitor.app',
+  'wm.sinostor.com.cn',
   ...Object.keys(VARIANT_HOST_MAP),
 ]);
 const VERCEL_PREVIEW_RE = /^[a-z0-9-]+-[a-z0-9]{8,}\.vercel\.app$/;
