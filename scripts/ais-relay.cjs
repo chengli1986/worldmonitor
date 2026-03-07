@@ -1828,7 +1828,7 @@ async function cyberFetchFeodo(limit, cutoffMs) {
       if (t) { out.push(t); if (out.length >= limit) break; }
     }
     return out;
-  } catch { return []; }
+  } catch (e) { console.warn('[Cyber] Feodo fetch failed:', e?.message || e); return []; }
 }
 async function cyberFetchUrlhaus(limit, cutoffMs) {
   if (!URLHAUS_AUTH_KEY) return [];
@@ -1858,7 +1858,7 @@ async function cyberFetchUrlhaus(limit, cutoffMs) {
       if (t) { out.push(t); if (out.length >= limit) break; }
     }
     return out;
-  } catch { return []; }
+  } catch (e) { console.warn('[Cyber] URLhaus fetch failed:', e?.message || e); return []; }
 }
 async function cyberFetchC2Intel(limit) {
   try {
@@ -1880,7 +1880,7 @@ async function cyberFetchC2Intel(limit) {
       if (t) { out.push(t); if (out.length >= limit) break; }
     }
     return out;
-  } catch { return []; }
+  } catch (e) { console.warn('[Cyber] C2Intel fetch failed:', e?.message || e); return []; }
 }
 async function cyberFetchOtx(limit, days) {
   if (!OTX_API_KEY) return [];
@@ -1897,7 +1897,7 @@ async function cyberFetchOtx(limit, days) {
       if (t) { out.push(t); if (out.length >= limit) break; }
     }
     return out;
-  } catch { return []; }
+  } catch (e) { console.warn('[Cyber] OTX fetch failed:', e?.message || e); return []; }
 }
 async function cyberFetchAbuseIpDb(limit) {
   if (!ABUSEIPDB_API_KEY) return [];
@@ -1913,7 +1913,7 @@ async function cyberFetchAbuseIpDb(limit) {
       if (t) { out.push(t); if (out.length >= limit) break; }
     }
     return out;
-  } catch { return []; }
+  } catch (e) { console.warn('[Cyber] AbuseIPDB fetch failed:', e?.message || e); return []; }
 }
 
 async function seedCyberThreats() {
@@ -2077,7 +2077,7 @@ async function seedPositiveEvents() {
     let anyQuerySucceeded = false;
 
     for (let i = 0; i < POSITIVE_QUERIES.length; i++) {
-      if (i > 0) await new Promise((r) => setTimeout(r, 500));
+      if (i > 0) await new Promise((r) => setTimeout(r, 5_500)); // GDELT rate limit: 1 req per 5s
       try {
         const events = await fetchGdeltGeoPositive(POSITIVE_QUERIES[i]);
         anyQuerySucceeded = true;

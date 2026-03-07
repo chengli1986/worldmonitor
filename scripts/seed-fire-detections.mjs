@@ -97,7 +97,7 @@ async function fetchAllRegions(apiKey) {
         failed++;
         console.error(`  [FIRMS] ${source}/${regionName}: ${err.message || err}`);
       }
-      await sleep(200);
+      await sleep(6_000); // FIRMS free tier: 10 req/min — 6s between calls stays safely under limit
     }
     console.log(`  ${source}: ${fireDetections.length} total (${fulfilled} ok, ${failed} failed)`);
   }
