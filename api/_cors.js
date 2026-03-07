@@ -1,4 +1,5 @@
 const ALLOWED_ORIGIN_PATTERNS = [
+  /^https:\/\/wm\.sinostor\.com\.cn$/,
   /^https:\/\/(.*\.)?worldmonitor\.app$/,
   /^https:\/\/worldmonitor-[a-z0-9-]+-elie-[a-z0-9]+\.vercel\.app$/,
   /^https?:\/\/localhost(:\d+)?$/,
