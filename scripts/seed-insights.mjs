@@ -187,10 +187,13 @@ function categorizeStory(title) {
 }
 
 async function warmDigestCache() {
-  const apiBase = process.env.API_BASE_URL || 'https://api.worldmonitor.app';
+  const apiBase = process.env.API_BASE_URL || 'https://worldmonitor-six-ochre-42.vercel.app';
   try {
     const resp = await fetch(`${apiBase}/api/news/v1/list-feed-digest?variant=full&lang=en`, {
-      headers: { 'User-Agent': CHROME_UA },
+      headers: {
+        'User-Agent': CHROME_UA,
+        'Origin': apiBase,
+      },
       signal: AbortSignal.timeout(30_000),
     });
     if (resp.ok) console.log('  Digest cache warmed via RPC');
