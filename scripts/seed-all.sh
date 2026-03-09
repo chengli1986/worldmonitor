@@ -33,6 +33,7 @@ case "$GROUP" in
     run_seed seed-commodity-quotes.mjs
     run_seed seed-prediction-markets.mjs
     run_seed seed-stablecoin-markets.mjs
+    run_seed seed-insights.mjs
     ;;
   medium)
     run_seed seed-climate-anomalies.mjs
