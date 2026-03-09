@@ -74,7 +74,7 @@ interface WebcamIframeTracker {
 }
 
 export class LiveWebcamsPanel extends Panel {
-  private viewMode: ViewMode = 'grid';
+  private viewMode: ViewMode = 'single';
   private regionFilter: RegionFilter = 'iran';
   private activeFeed: WebcamFeed = WEBCAM_FEEDS[0]!;
   private toolbar: HTMLElement | null = null;
@@ -256,7 +256,7 @@ export class LiveWebcamsPanel extends Panel {
       return `http://localhost:${getLocalApiPort()}/api/youtube-embed?${params.toString()}`;
     }
     const vq = quality !== 'auto' ? `&vq=${quality}` : '';
-    return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0&enablejsapi=1&origin=${window.location.origin}${vq}`;
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0&enablejsapi=1&origin=${window.location.origin}${vq}`;
   }
 
   private createIframe(feed: WebcamFeed): HTMLIFrameElement {
