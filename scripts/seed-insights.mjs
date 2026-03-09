@@ -186,7 +186,7 @@ function categorizeStory(title) {
   return { category: 'general', threatLevel: 'moderate' };
 }
 
-async function warmDigestCache() {
+async function fetchDigestFromAPI() {
   const apiBase = process.env.API_BASE_URL || 'https://worldmonitor-six-ochre-42.vercel.app';
   try {
     const resp = await fetch(`${apiBase}/api/news/v1/list-feed-digest?variant=full&lang=en`, {
@@ -196,21 +196,24 @@ async function warmDigestCache() {
       },
       signal: AbortSignal.timeout(30_000),
     });
-    if (resp.ok) console.log('  Digest cache warmed via RPC');
-    else console.warn(`  Digest warm failed: HTTP ${resp.status}`);
+    if (!resp.ok) {
+      console.warn(`  Digest API failed: HTTP ${resp.status}`);
+      return null;
+    }
+    const data = await resp.json();
+    console.log('  Digest fetched directly from API');
+    return data;
   } catch (err) {
-    console.warn(`  Digest warm failed: ${err.message}`);
+    console.warn(`  Digest API failed: ${err.message}`);
+    return null;
   }
 }
 
 async function fetchInsights() {
   let digest = await readDigestFromRedis();
   if (!digest) {
-    console.log('  Digest not in Redis, warming cache via RPC...');
-    await warmDigestCache();
-    // Wait for RPC write to propagate to Redis
-    await new Promise(r => setTimeout(r, 3_000));
-    digest = await readDigestFromRedis();
+    console.log('  Digest not in Redis, fetching directly from API...');
+    digest = await fetchDigestFromAPI();
   }
   if (!digest) {
     // LKG fallback: reuse existing insights if digest is unavailable

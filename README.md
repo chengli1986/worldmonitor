@@ -405,7 +405,7 @@ bash scripts/seed-all.sh slow    # Every 6h:   cyber threats, wildfires
 bash scripts/seed-all.sh heavy   # Daily:      World Bank, displacement
 ```
 
-The `seed-insights.mjs` script generates the **AI World Brief** by reading the news digest from Redis, clustering headlines, and calling Groq (Llama 3.1 8B) for a 2-sentence summary.
+The `seed-insights.mjs` script generates the **AI World Brief** by fetching the news digest (from Redis or directly from the Vercel API as fallback), clustering headlines, and calling Groq (Llama 3.1 8B) for a 2-sentence summary.
 
 ### Feature Health Check
 
