@@ -390,6 +390,41 @@ This runs the frontend without the API layer. Panels that require server-side pr
 | **Raspberry Pi / ARM** | Partial                 | `vercel dev` edge runtime emulation may not work on ARM. Use Option 1 (deploy to Vercel) or Option 3 (static frontend) instead |
 | **Docker**             | Planned                 | See [Roadmap](#roadmap)                                                                                                        |
 
+### Data Seeding (EC2 → Redis)
+
+World Monitor uses **seed scripts** running on EC2 to populate Upstash Redis with data from external APIs. The Vercel frontend reads from Redis for instant page loads.
+
+```bash
+# Run all seeds manually
+bash scripts/seed-all.sh all
+
+# Run a specific group
+bash scripts/seed-all.sh fast    # Every 30min: earthquakes, markets, crypto, predictions, insights
+bash scripts/seed-all.sh medium  # Every 2h:   climate, unrest, ETF, outages, BIS
+bash scripts/seed-all.sh slow    # Every 6h:   cyber threats, wildfires
+bash scripts/seed-all.sh heavy   # Daily:      World Bank, displacement
+```
+
+The `seed-insights.mjs` script generates the **AI World Brief** by reading the news digest from Redis, clustering headlines, and calling Groq (Llama 3.1 8B) for a 2-sentence summary.
+
+### Feature Health Check
+
+A comprehensive health check script tests all key features and Vercel performance:
+
+```bash
+bash scripts/demo-health-check.sh
+```
+
+Checks 17 features (video streaming, AI summarize, Pizza Index, strategic risk, market/crypto/earthquake data, etc.) and measures API latency across 8 endpoints. Output example:
+
+```
+✓ PASS | Video Embed            | YouTube embed HTML OK
+✓ PASS | AI World Brief         | ok, 8 stories, groq, 3min: ...
+✓ PASS | Pizza Index            | DEFCON 4, 10 locs, 1 spikes
+✓ PASS | News Digest            | 16 cats, 295 items
+✓ PASS | Homepage               | 152ms, 19KB
+```
+
 ### Railway Relay (Optional)
 
 The Railway relay is a multi-protocol gateway that handles data sources requiring persistent connections, residential proxying, or upstream APIs that block Vercel's edge runtime:
