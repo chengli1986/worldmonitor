@@ -72,6 +72,126 @@ npm run dev:happy      # happy.worldmonitor.app
 
 See the **[self-hosting guide](https://docs.worldmonitor.app/getting-started)** for deployment options (Vercel, Docker, static).
 
+The `.env.example` file documents every variable with descriptions and registration links, organized by deployment target (Vercel vs Railway). Key groups:
+
+| Group             | Variables                                                                  | Free Tier                                  |
+| ----------------- | -------------------------------------------------------------------------- | ------------------------------------------ |
+| **AI (Local)**    | `OLLAMA_API_URL`, `OLLAMA_MODEL`                                           | Free (runs on your hardware)               |
+| **AI (Cloud)**    | `GROQ_API_KEY`, `OPENROUTER_API_KEY`                                       | 14,400 req/day (Groq), 50/day (OpenRouter) |
+| **Cache**         | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                       | 10K commands/day                           |
+| **Markets**       | `FINNHUB_API_KEY`, `FRED_API_KEY`, `EIA_API_KEY`                           | All free tier                              |
+| **Tracking**      | `WINGBITS_API_KEY`, `AISSTREAM_API_KEY`                                    | Free                                       |
+| **Geopolitical**  | `ACLED_ACCESS_TOKEN`, `CLOUDFLARE_API_TOKEN`, `NASA_FIRMS_API_KEY`         | Free for researchers                       |
+| **Relay**         | `WS_RELAY_URL`, `VITE_WS_RELAY_URL`, `OPENSKY_CLIENT_ID/SECRET`            | Self-hosted                                |
+| **UI**            | `VITE_VARIANT`, `VITE_MAP_INTERACTION_MODE` (`flat` or `3d`, default `3d`) | N/A                                        |
+| **Observability** | `VITE_SENTRY_DSN` (optional, empty disables reporting)                     | N/A                                        |
+
+See [`.env.example`](./.env.example) for the complete list with registration links.
+
+---
+
+## Self-Hosting
+
+World Monitor relies on **60+ Vercel Edge Functions** in the `api/` directory for RSS proxying, data caching, and API key isolation. Running `npm run dev` alone starts only the Vite frontend — the edge functions won't execute, and most panels (news feeds, markets, AI summaries) will be empty.
+
+### Option 1: Deploy to Vercel (Recommended)
+
+The simplest path — Vercel runs the edge functions natively on their free tier:
+
+```bash
+npm install -g vercel
+vercel          # Follow prompts to link/create project
+```
+
+Add your API keys in the Vercel dashboard under **Settings → Environment Variables**, then visit your deployment URL. The free Hobby plan supports all 60+ edge functions.
+
+### Option 2: Local Development with Vercel CLI
+
+To run everything locally (frontend + edge functions):
+
+```bash
+npm install -g vercel
+cp .env.example .env.local   # Add your API keys
+vercel dev                   # Starts on http://localhost:3000
+```
+
+> **Important**: Use `vercel dev` instead of `npm run dev`. The Vercel CLI emulates the edge runtime locally so all `api/` endpoints work. Plain `npm run dev` only starts Vite and the API layer won't be available.
+
+### Option 3: Static Frontend Only
+
+If you only want the map and client-side features (no news feeds, no AI, no market data):
+
+```bash
+npm run dev    # Vite dev server on http://localhost:5173
+```
+
+This runs the frontend without the API layer. Panels that require server-side proxying will show "No data available". The interactive map, static data layers (bases, cables, pipelines), and browser-side ML models still work.
+
+### Platform Notes
+
+| Platform               | Status                  | Notes                                                                                                                          |
+| ---------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Vercel**             | Full support            | Recommended deployment target                                                                                                  |
+| **Linux x86_64**       | Full support            | Works with `vercel dev` for local development. Desktop .AppImage available for x86_64. WebKitGTK rendering uses DMA-BUF with fallback to SHM for GPU compatibility. Font stack includes DejaVu Sans Mono and Liberation Mono for consistent rendering across distros |
+| **macOS**              | Works with `vercel dev` | Full local development                                                                                                         |
+| **Raspberry Pi / ARM** | Partial                 | `vercel dev` edge runtime emulation may not work on ARM. Use Option 1 (deploy to Vercel) or Option 3 (static frontend) instead |
+| **Docker**             | Planned                 | See [Roadmap](#roadmap)                                                                                                        |
+
+### Data Seeding (EC2 → Redis)
+
+World Monitor uses **seed scripts** running on EC2 to populate Upstash Redis with data from external APIs. The Vercel frontend reads from Redis for instant page loads.
+
+```bash
+# Run all seeds manually
+bash scripts/seed-all.sh all
+
+# Run a specific group
+bash scripts/seed-all.sh fast    # Every 30min: earthquakes, markets, crypto, predictions, insights
+bash scripts/seed-all.sh medium  # Every 2h:   climate, unrest, ETF, outages, BIS
+bash scripts/seed-all.sh slow    # Every 6h:   cyber threats, wildfires
+bash scripts/seed-all.sh heavy   # Daily:      World Bank, displacement
+```
+
+The `seed-insights.mjs` script generates the **AI World Brief** by fetching the news digest (from Redis or directly from the Vercel API as fallback), clustering headlines, and calling Groq (Llama 3.1 8B) for a 2-sentence summary.
+
+### Feature Health Check
+
+A comprehensive health check script tests all key features and Vercel performance:
+
+```bash
+bash scripts/demo-health-check.sh
+```
+
+Checks 17 features (video streaming, AI summarize, Pizza Index, strategic risk, market/crypto/earthquake data, etc.) and measures API latency across 8 endpoints. Output example:
+
+```
+✓ PASS | Video Embed            | YouTube embed HTML OK
+✓ PASS | AI World Brief         | ok, 8 stories, groq, 3min: ...
+✓ PASS | Pizza Index            | DEFCON 4, 10 locs, 1 spikes
+✓ PASS | News Digest            | 16 cats, 295 items
+✓ PASS | Homepage               | 152ms, 19KB
+```
+
+### Railway Relay (Optional)
+
+The Railway relay is a multi-protocol gateway that handles data sources requiring persistent connections, residential proxying, or upstream APIs that block Vercel's edge runtime:
+
+```bash
+# On Railway, deploy with:
+node scripts/ais-relay.cjs
+```
+
+| Service                 | Protocol        | Purpose                                                              |
+| ----------------------- | --------------- | -------------------------------------------------------------------- |
+| **AIS Vessel Tracking** | WebSocket       | Live AIS maritime data with chokepoint detection and density grids   |
+| **OpenSky Aircraft**    | REST (polling)  | Military flight tracking across merged query regions                 |
+| **Telegram OSINT**      | MTProto (GramJS)| 26 OSINT channels polled on 60s cycle with FLOOD_WAIT handling       |
+| **OREF Rocket Alerts**  | curl + proxy    | Israel Home Front Command sirens via residential proxy (Akamai WAF)  |
+| **Polymarket Proxy**    | HTTPS           | JA3 fingerprint bypass with request queuing and cache deduplication   |
+| **ICAO NOTAM**          | REST            | Airport/airspace closure detection for 46 MENA airports              |
+
+Set `WS_RELAY_URL` (server-side, HTTPS) and `VITE_WS_RELAY_URL` (client-side, WSS) in your environment. Without the relay, AIS, OpenSky, Telegram, and OREF layers won't show live data, but all other features work normally.
+
 ---
 
 ## Tech Stack
