@@ -99,7 +99,7 @@ interface WebcamIframeTracker {
 }
 
 export class LiveWebcamsPanel extends Panel {
-  private viewMode: ViewMode = 'grid';
+  private viewMode: ViewMode = 'single';
   private regionFilter: RegionFilter = 'iran';
   private activeFeed: WebcamFeed = WEBCAM_FEEDS[0]!;
   private toolbar: HTMLElement | null = null;
