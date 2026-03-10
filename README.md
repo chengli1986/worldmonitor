@@ -412,10 +412,14 @@ The `seed-insights.mjs` script generates the **AI World Brief** by fetching the 
 A comprehensive health check script tests all key features and Vercel performance:
 
 ```bash
+# Console output only
 bash scripts/demo-health-check.sh
+
+# With professional HTML email report
+bash scripts/demo-health-check.sh --email
 ```
 
-Checks 17 features (video streaming, AI summarize, Pizza Index, strategic risk, market/crypto/earthquake data, etc.) and measures API latency across 8 endpoints. Output example:
+Checks 17 features (video streaming, AI summarize, Pizza Index, strategic risk, market/crypto/earthquake data, etc.) and measures API latency across 8 endpoints. The `--email` flag sends a styled HTML report with status badges, latency bars, and responsive layout. Output example:
 
 ```
 ✓ PASS | Video Embed            | YouTube embed HTML OK
