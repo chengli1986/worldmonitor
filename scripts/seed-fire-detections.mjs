@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { loadEnvFile, maskToken, runSeed, CHROME_UA, sleep } from './_seed-utils.mjs';
+import { loadEnvFile, maskToken, runSeed, CHROME_UA, sleep, withRetry } from './_seed-utils.mjs';
 
 loadEnvFile(import.meta.url);
 
@@ -51,14 +51,16 @@ function parseDetectedAt(acqDate, acqTime) {
 }
 
 async function fetchRegionSource(apiKey, regionName, bbox, source) {
-  const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${apiKey}/${source}/${bbox}/1`;
-  const res = await fetch(url, {
-    headers: { Accept: 'text/csv', 'User-Agent': CHROME_UA },
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!res.ok) throw new Error(`FIRMS ${res.status} for ${regionName}/${source}`);
-  const csv = await res.text();
-  return parseCSV(csv);
+  return withRetry(async () => {
+    const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${apiKey}/${source}/${bbox}/1`;
+    const res = await fetch(url, {
+      headers: { Accept: 'text/csv', 'User-Agent': CHROME_UA },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) throw new Error(`FIRMS ${res.status} for ${regionName}/${source}`);
+    const csv = await res.text();
+    return parseCSV(csv);
+  }, 2, 3000); // 2 retries per request, 3s initial backoff
 }
 
 async function fetchAllRegions(apiKey) {
@@ -102,6 +104,14 @@ async function fetchAllRegions(apiKey) {
     console.log(`  ${source}: ${fireDetections.length} total (${fulfilled} ok, ${failed} failed)`);
   }
 
+  const totalCalls = FIRMS_SOURCES.length * entries.length;
+  if (fulfilled === 0 && failed > 0) {
+    throw new Error(`All ${failed}/${totalCalls} FIRMS API calls failed — likely transient API outage`);
+  }
+  if (fireDetections.length === 0 && fulfilled > 0) {
+    console.warn(`  WARNING: ${fulfilled} calls succeeded but returned 0 detections (all regions empty)`);
+  }
+
   return { fireDetections, pagination: undefined };
 }
 
@@ -117,7 +127,7 @@ async function main() {
   await runSeed('wildfire', 'fires', CANONICAL_KEY, () => fetchAllRegions(apiKey), {
     validateFn: (data) => Array.isArray(data?.fireDetections) && data.fireDetections.length > 0,
     ttlSeconds: 7200,
-    lockTtlMs: 600_000, // 10 min — 27 calls × (6s pace + up to 30s timeout) can exceed 5 min under partial slowness
+    lockTtlMs: 900_000, // 15 min — 27 calls × (6s pace + per-request retries) + runSeed-level retries on full outage
     sourceVersion: FIRMS_SOURCES.join('+'),
   });
 }

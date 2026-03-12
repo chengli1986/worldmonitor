@@ -16,7 +16,7 @@ run_seed() {
   local script="$1"
   local start=$SECONDS
   echo "$LOG_PREFIX Running $script..."
-  if timeout 300 node "$CD/$script" 2>&1 | tail -3; then
+  if timeout 600 node "$CD/$script" 2>&1 | tail -3; then
     echo "$LOG_PREFIX $script done ($((SECONDS - start))s)"
   else
     echo "$LOG_PREFIX $script FAILED ($((SECONDS - start))s)" >&2
