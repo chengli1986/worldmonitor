@@ -147,7 +147,7 @@ bash scripts/seed-all.sh all
 
 # Run a specific group
 bash scripts/seed-all.sh fast    # Every 30min: earthquakes, markets, crypto, predictions, insights
-bash scripts/seed-all.sh medium  # Every 2h:   climate, unrest, ETF, outages, BIS
+bash scripts/seed-all.sh medium  # Every 2h:   climate, unrest, ETF, outages, BIS, rss-digest
 bash scripts/seed-all.sh slow    # Every 6h:   cyber threats, wildfires
 bash scripts/seed-all.sh heavy   # Daily:      World Bank, displacement
 ```
