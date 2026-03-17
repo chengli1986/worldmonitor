@@ -5,7 +5,7 @@ set -eo pipefail
 # Usage: seed-all.sh [fast|medium|slow|heavy]
 #
 # fast   (every 30min): earthquakes, market, crypto, commodities, predictions, stablecoins
-# medium (every 2h):    climate, natural, unrest, etf, gulf, outages, service, airport, bis, rss-digest
+# medium (every 2h):    climate, natural, unrest, etf, gulf, outages, service, airport, bis, rss-digest, video-embed, pizzint
 # slow   (every 6h):    cyber threats, wildfires
 # heavy  (daily):       world bank, displacement
 
@@ -46,6 +46,8 @@ case "$GROUP" in
     run_seed seed-airport-delays.mjs
     run_seed seed-bis-data.mjs
     run_seed seed-rss-digest.mjs
+    run_seed seed-video-embed.mjs
+    run_seed seed-pizzint.mjs
     ;;
   slow)
     run_seed seed-cyber-threats.mjs
