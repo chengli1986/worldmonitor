@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Warm-pings the Vercel RPC endpoint to populate the Redis cache.
- * The RPC handler (list-service-statuses.ts) does the actual fetching
- * and caching via cachedFetchJson. This script just triggers it.
+ * Fetches service statuses via the Vercel RPC endpoint and writes
+ * directly to Redis from EC2.
  *
- * Standalone fallback — primary seeder is the AIS relay loop.
+ * Previous warm-ping approach relied on Vercel's cachedFetchJson writing
+ * to Redis, but serverless runtime truncates background promises after
+ * the response is sent, so the Redis write never completed.
  */
 
 import { loadEnvFile, CHROME_UA, getRedisCredentials, logSeedResult, extendExistingTtl } from './_seed-utils.mjs';
@@ -14,10 +15,11 @@ loadEnvFile(import.meta.url);
 
 const RPC_URL = 'https://api.worldmonitor.app/api/infrastructure/v1/list-service-statuses';
 const CANONICAL_KEY = 'infra:service-statuses:v1';
+const CACHE_TTL = 1800; // 30 minutes, matches server-side TTL
 
-async function warmPing() {
+async function seedServiceStatuses() {
   const startMs = Date.now();
-  console.log('=== infra:service-statuses Warm Ping ===');
+  console.log('=== infra:service-statuses Seed ===');
   console.log(`  Key:     ${CANONICAL_KEY}`);
   console.log(`  Target:  ${RPC_URL}`);
 
@@ -43,10 +45,33 @@ async function warmPing() {
     process.exit(0);
   }
 
-  const count = data?.statuses?.length || 0;
+  const statuses = data?.statuses;
+  const count = statuses?.length || 0;
   console.log(`  Statuses: ${count}`);
 
+  if (!count) {
+    console.warn('  SKIPPED: no statuses returned');
+    await extendExistingTtl([CANONICAL_KEY], 7200);
+    console.log(`\n=== Done (${Math.round(Date.now() - startMs)}ms, no write) ===`);
+    process.exit(0);
+  }
+
+  // Write directly to Redis from EC2
   const { url, token } = getRedisCredentials();
+  const payload = JSON.stringify(statuses);
+  const setResp = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(['SET', CANONICAL_KEY, payload, 'EX', CACHE_TTL]),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!setResp.ok) {
+    const text = await setResp.text().catch(() => '');
+    throw new Error(`Redis SET failed: HTTP ${setResp.status} — ${text.slice(0, 200)}`);
+  }
+
+  // Verify
   const verifyResp = await fetch(`${url}/get/${encodeURIComponent(CANONICAL_KEY)}`, {
     headers: { Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(5_000),
@@ -55,15 +80,15 @@ async function warmPing() {
   if (verifyData.result) {
     console.log('  Verified: data present in Redis');
   } else {
-    throw new Error('Verification failed: Redis key empty after successful RPC');
+    throw new Error('Verification failed: Redis key empty after write');
   }
 
   const durationMs = Date.now() - startMs;
-  logSeedResult('infra', count, durationMs, { mode: 'warm-ping' });
+  logSeedResult('infra', count, durationMs, { mode: 'direct-write' });
   console.log(`\n=== Done (${Math.round(durationMs)}ms) ===`);
 }
 
-warmPing().then(() => {
+seedServiceStatuses().then(() => {
   process.exit(0);
 }).catch((err) => {
   console.error(`ERROR: ${err.message || err}`);
