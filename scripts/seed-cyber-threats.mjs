@@ -6,11 +6,11 @@ loadEnvFile(import.meta.url);
 
 const ABUSEIPDB_RATE_KEY = 'rate:abuseipdb:last-call';
 const ABUSEIPDB_CACHE_KEY = 'cache:abuseipdb:threats';
-const ABUSEIPDB_MIN_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2h — keeps daily calls under 100/day limit
+const ABUSEIPDB_MIN_INTERVAL_MS = 5 * 60 * 60 * 1000; // 5h — keeps daily calls under 100/day limit (slow group runs every 6h)
 
 const CANONICAL_KEY = 'cyber:threats:v2';
 const BOOTSTRAP_KEY = 'cyber:threats-bootstrap:v2';
-const CACHE_TTL = 10800; // 3h — survives 1 missed 2h cron cycle
+const CACHE_TTL = 25200; // 7h — slow group runs every 6h
 
 const FEODO_URL = 'https://feodotracker.abuse.ch/downloads/ipblocklist.json';
 const URLHAUS_RECENT_URL = (limit) => `https://urlhaus-api.abuse.ch/v1/urls/recent/limit/${limit}/`;

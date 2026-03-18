@@ -6,7 +6,7 @@ loadEnvFile(import.meta.url);
 
 const CF_RADAR_URL = 'https://api.cloudflare.com/client/v4/radar/annotations/outages';
 const CANONICAL_KEY = 'infra:outages:v1';
-const CACHE_TTL = 1800; // 30 min
+const CACHE_TTL = 7800; // 2h + 10min buffer — medium group runs every 2h
 
 const COUNTRY_COORDS = {
   AF:[33.94,67.71],AL:[41.15,20.17],DZ:[28.03,1.66],AO:[-11.20,17.87],

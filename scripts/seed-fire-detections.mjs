@@ -126,7 +126,7 @@ async function main() {
 
   await runSeed('wildfire', 'fires', CANONICAL_KEY, () => fetchAllRegions(apiKey), {
     validateFn: (data) => Array.isArray(data?.fireDetections) && data.fireDetections.length > 0,
-    ttlSeconds: 7200,
+    ttlSeconds: 25200, // 7h — slow group runs every 6h
     lockTtlMs: 900_000, // 15 min — 27 calls × (6s pace + per-request retries) + runSeed-level retries on full outage
     sourceVersion: FIRMS_SOURCES.join('+'),
   });

@@ -11,8 +11,8 @@
  * directly to Redis (direct-write mode), matching the data shape that
  * the Vercel cachedFetchJson handler expects.
  *
- * Runs in the "medium" seed group (every 2h). Cache TTL is 900s (15 min)
- * to match upstream data refresh rate.
+ * Runs in the "medium" seed group (every 2h). Cache TTL is 7800s (2h+10min)
+ * to survive the full cron interval with buffer.
  */
 
 import { loadEnvFile, CHROME_UA, getRedisCredentials, logSeedResult, extendExistingTtl, withRetry } from './_seed-utils.mjs';
@@ -26,7 +26,7 @@ const DEFAULT_GDELT_PAIRS = 'usa_russia,russia_ukraine,usa_china,china_taiwan,us
 // Redis keys — must match server/worldmonitor/intelligence/v1/get-pizzint-status.ts
 const CACHE_KEY_GDELT = 'intel:pizzint:v1:gdelt';
 const CACHE_KEY_BASE = 'intel:pizzint:v1:base';
-const CACHE_TTL = 900; // 15 min
+const CACHE_TTL = 7800; // 2h + 10min buffer — medium group runs every 2h
 
 const FETCH_TIMEOUT_MS = 20_000;
 

@@ -10,7 +10,7 @@ import predictionTags from './data/prediction-tags.json' with { type: 'json' };
 loadEnvFile(import.meta.url);
 
 const CANONICAL_KEY = 'prediction:markets-bootstrap:v1';
-const CACHE_TTL = 1800; // 30 min — matches client poll interval
+const CACHE_TTL = 2400; // 40min — fast group runs every 30min + 10min buffer
 
 const GAMMA_BASE = 'https://gamma-api.polymarket.com';
 const KALSHI_BASE = 'https://api.elections.kalshi.com/trade-api/v2';

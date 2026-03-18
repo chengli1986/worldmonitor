@@ -15,7 +15,7 @@ loadEnvFile(import.meta.url);
 
 const RPC_URL = 'https://api.worldmonitor.app/api/infrastructure/v1/list-service-statuses';
 const CANONICAL_KEY = 'infra:service-statuses:v1';
-const CACHE_TTL = 1800; // 30 minutes, matches server-side TTL
+const CACHE_TTL = 7800; // 2h + 10min buffer — medium group runs every 2h
 
 async function seedServiceStatuses() {
   const startMs = Date.now();

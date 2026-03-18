@@ -7,7 +7,7 @@ const etfConfig = loadSharedConfig('etfs.json');
 loadEnvFile(import.meta.url);
 
 const CANONICAL_KEY = 'market:etf-flows:v1';
-const CACHE_TTL = 3600;
+const CACHE_TTL = 7800; // 2h + 10min buffer — medium group runs every 2h
 const YAHOO_DELAY_MS = 200;
 
 const ETF_LIST = etfConfig.btcSpot;

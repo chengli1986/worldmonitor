@@ -6,7 +6,7 @@ loadEnvFile(import.meta.url);
 
 const FAA_CACHE_KEY = 'aviation:delays:faa:v1';
 const NOTAM_CACHE_KEY = 'aviation:notam:closures:v2';
-const CACHE_TTL = 7200;
+const CACHE_TTL = 7800; // 2h + 10min buffer — medium group runs every 2h
 
 const FAA_URL = 'https://nasstatus.faa.gov/api/airport-status-information';
 const ICAO_NOTAM_URL = 'https://dataservices.icao.int/api/notams-realtime-list';

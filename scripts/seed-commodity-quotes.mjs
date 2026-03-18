@@ -7,7 +7,7 @@ const commodityConfig = loadSharedConfig('commodities.json');
 loadEnvFile(import.meta.url);
 
 const CANONICAL_KEY = 'market:commodities-bootstrap:v1';
-const CACHE_TTL = 1800;
+const CACHE_TTL = 2400; // 40min — fast group runs every 30min + 10min buffer
 const YAHOO_DELAY_MS = 200;
 
 async function fetchYahooWithRetry(url, label, maxAttempts = 4) {

@@ -8,7 +8,7 @@ loadEnvFile(import.meta.url);
 const GDELT_GKG_URL = 'https://api.gdeltproject.org/api/v1/gkg_geojson';
 const ACLED_API_URL = 'https://acleddata.com/api/acled/read';
 const CANONICAL_KEY = 'unrest:events:v1';
-const CACHE_TTL = 3600;
+const CACHE_TTL = 7800; // 2h + 10min buffer — medium group runs every 2h
 
 // ---------- ACLED Event Type Mapping (from _shared.ts) ----------
 
