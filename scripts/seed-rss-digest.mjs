@@ -11,10 +11,9 @@
  * so the Vercel function populates the cache. Subsequent requests (including
  * the health check) get a cache hit and respond in <100ms.
  *
- * Runs in the "medium" seed group (every 2h). The digest cache TTL is 900s
- * (15 min), so the cache will expire between runs, but Vercel itself will
- * rebuild on the next user request — the seed just ensures a periodic warm-up
- * so the cache isn't cold for too long.
+ * Runs in the "medium" seed group (every 2h). Vercel sets a short cache TTL
+ * (900s / 15 min), so after warming we extend the Redis TTL to 7800s (2h+10min)
+ * to survive until the next seed run.
  */
 
 import { loadEnvFile, CHROME_UA, logSeedResult, extendExistingTtl } from './_seed-utils.mjs';
@@ -28,8 +27,9 @@ const RPC_PATH = '/api/news/v1/list-feed-digest';
 const VARIANTS = ['full', 'tech'];
 const LANG = 'en';
 const FETCH_TIMEOUT_MS = 30_000; // generous timeout for cold cache builds
+const CACHE_TTL_S = 7800; // 2h + 10min buffer — must exceed medium seed interval (2h)
 
-// Redis keys that the Vercel function writes (for TTL extension on failure)
+// Redis keys that the Vercel function writes
 const CACHE_KEYS = VARIANTS.map(v => `news:digest:v1:${v}:${LANG}`);
 
 async function warmVariant(variant) {
@@ -91,6 +91,9 @@ async function seedRssDigest() {
     console.log(`\n=== Failed gracefully (${Math.round(Date.now() - startMs)}ms) ===`);
     process.exit(0);
   }
+
+  // Extend TTL on warmed cache keys so they survive until next seed run
+  await extendExistingTtl(CACHE_KEYS, CACHE_TTL_S);
 
   const totalItems = results.reduce((n, r) => n + r.items, 0);
   const durationMs = Date.now() - startMs;
