@@ -205,7 +205,7 @@ redis_checks = [
     ("Predictions",        "prediction:markets-bootstrap:v1"),
     ("Climate Anomalies",  "climate:anomalies:v1"),
     ("Displacement",       "displacement:summary:v1:2026"),
-    ("Cyber Threats",      "supply_chain:minerals:v2"),
+    ("Cyber Threats",      "cyber:threats:v2"),
     ("ETF Flows",          "market:commodities-bootstrap:v1"),
     ("BIS Economic",       "economic:bis:policy:v1"),
 ]

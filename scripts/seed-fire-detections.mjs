@@ -52,7 +52,7 @@ function parseDetectedAt(acqDate, acqTime) {
 
 async function fetchRegionSource(apiKey, regionName, bbox, source) {
   return withRetry(async () => {
-    const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${apiKey}/${source}/${bbox}/1`;
+    const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${apiKey}/${source}/${bbox}/2`;
     const res = await fetch(url, {
       headers: { Accept: 'text/csv', 'User-Agent': CHROME_UA },
       signal: AbortSignal.timeout(30_000),
