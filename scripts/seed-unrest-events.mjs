@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import https from 'node:https';
 import { loadEnvFile, CHROME_UA, runSeed } from './_seed-utils.mjs';
 import { getAcledToken } from './shared/acled-oauth.mjs';
 
@@ -165,14 +166,23 @@ async function fetchGdeltEvents() {
     maxrows: '2500',
   });
 
-  const resp = await fetch(`${GDELT_GKG_URL}?${params}`, {
-    headers: { Accept: 'application/json', 'User-Agent': CHROME_UA },
-    signal: AbortSignal.timeout(15_000),
+  // Use node:https instead of fetch — undici's hardcoded 10s connect timeout
+  // is too short for GDELT's slow TLS handshake from this EC2 region.
+  const url = `${GDELT_GKG_URL}?${params}`;
+  const data = await new Promise((resolve, reject) => {
+    const req = https.get(url, { timeout: 45_000, headers: { Accept: 'application/json', 'User-Agent': CHROME_UA } }, (res) => {
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        reject(new Error(`GDELT API error: ${res.statusCode}`));
+        res.resume();
+        return;
+      }
+      let body = '';
+      res.on('data', (chunk) => body += chunk);
+      res.on('end', () => { try { resolve(JSON.parse(body)); } catch (e) { reject(e); } });
+    });
+    req.on('timeout', () => { req.destroy(); reject(new Error('GDELT request timeout (45s)')); });
+    req.on('error', reject);
   });
-
-  if (!resp.ok) throw new Error(`GDELT API error: ${resp.status}`);
-
-  const data = await resp.json();
   const features = data?.features || [];
 
   // Aggregate by location (v1 GKG returns individual mentions, not aggregated counts)
