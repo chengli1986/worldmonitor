@@ -112,6 +112,27 @@ async function fetchAllRegions(apiKey) {
     console.warn(`  WARNING: ${fulfilled} calls succeeded but returned 0 detections (all regions empty)`);
   }
 
+  // VIIRS NRT over 9 (some very large, e.g. Russia) regions × 3 sats × 2 days can
+  // exceed the 5MB/key Redis payload guard in _seed-utils (observed 8.2MB → seed
+  // FAILS). Keep the most significant fires — highest FRP (radiative power), then
+  // most recent — up to a byte budget under that guard. The dropped tail is low-FRP
+  // agricultural/noise pixels; the conflict-monitoring map keeps the meaningful ones.
+  const PAYLOAD_BUDGET_BYTES = 4.5 * 1024 * 1024; // headroom under _seed-utils 5MB limit
+  if (fireDetections.length) {
+    fireDetections.sort((a, b) => (b.frp - a.frp) || (b.detectedAt - a.detectedAt));
+    let bytes = 2; // surrounding []
+    let kept = 0;
+    for (const d of fireDetections) {
+      bytes += JSON.stringify(d).length + 1; // +1 for the comma
+      if (bytes > PAYLOAD_BUDGET_BYTES) break;
+      kept++;
+    }
+    if (kept < fireDetections.length) {
+      console.log(`  trimmed ${fireDetections.length - kept} low-FRP detections to fit ${(PAYLOAD_BUDGET_BYTES / 1024 / 1024).toFixed(1)}MB budget (kept ${kept}/${fireDetections.length} by FRP+recency)`);
+      fireDetections.length = kept;
+    }
+  }
+
   return { fireDetections, pagination: undefined };
 }
 
