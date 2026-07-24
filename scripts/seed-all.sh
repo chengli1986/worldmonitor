@@ -14,9 +14,10 @@ LOG_PREFIX="[seed-all]"
 
 run_seed() {
   local script="$1"
+  local tmo="${2:-600}"
   local start=$SECONDS
   echo "$LOG_PREFIX Running $script..."
-  if timeout 600 node "$CD/$script" 2>&1 | tail -3; then
+  if timeout "$tmo" node "$CD/$script" 2>&1 | tail -3; then
     echo "$LOG_PREFIX $script done ($((SECONDS - start))s)"
   else
     echo "$LOG_PREFIX $script FAILED ($((SECONDS - start))s)" >&2
@@ -51,7 +52,10 @@ case "$GROUP" in
     ;;
   slow)
     run_seed seed-cyber-threats.mjs
-    run_seed seed-fire-detections.mjs
+    # Russia bbox (20,50,180,82) is huge by design for conflict monitoring; peak
+    # NH wildfire season (Jul) inflates its VIIRS row count well past the 600s
+    # baseline (observed 405s on 2026-07-24, one run away from the group timeout).
+    run_seed seed-fire-detections.mjs 900
     ;;
   heavy)
     run_seed seed-wb-indicators.mjs
